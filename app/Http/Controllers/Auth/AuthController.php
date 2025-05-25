@@ -7,6 +7,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use App\Mail\WelcomeEmail;
+use Illuminate\Support\Facades\Mail;
 // use Laravel\Sanctum\HasApiTokens;
 // use Laravel\Sanctum\PersonalAccessToken;
 
@@ -32,6 +34,8 @@ class AuthController extends Controller
 
         // Create a new token for the user
         $token = $user->createToken('auth_token')->plainTextToken;
+
+         Mail::to($user->email)->send(new WelcomeEmail($user));
 
         return response()->json(['user' => $user, 'access_token' => $token, 'token_type' => 'Bearer'], 201);
     }
