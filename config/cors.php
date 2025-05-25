@@ -16,11 +16,12 @@
 return [
     'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
-    'allowed_origins' => [
-        'https://venzy.chibuikeinnocent.tech',
-        'https://venzy.vercel.app',
-        'https://locahost/5173',
-    ],
+    // 'allowed_origins' => [
+    //     'https://venzy.chibuikeinnocent.tech',
+    //     'https://venzy.vercel.app',
+    //     'http://locahost/5173',
+    // ],
+    'allowed_origins' =>  ['*'],
 
     'allowed_methods' => ['*'],
     'allowed_origins_patterns' => [],

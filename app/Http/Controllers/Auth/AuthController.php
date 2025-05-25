@@ -35,7 +35,12 @@ class AuthController extends Controller
         // Create a new token for the user
         $token = $user->createToken('auth_token')->plainTextToken;
 
-         Mail::to($user->email)->send(new WelcomeEmail($user));
+        try {
+            Mail::to($user->email)->send(new WelcomeEmail($user));
+        } catch (\Exception $e) {
+            \log::error('Mail send failed: ' . $e->getMessage());
+        }
+
 
         return response()->json(['user' => $user, 'access_token' => $token, 'token_type' => 'Bearer'], 201);
     }
