@@ -21,12 +21,13 @@ class ResetPasswordMail extends Mailable
 
     public function build()
     {
-        $frontendUrl = config('app.frontend_url', 'https://innoblog.com.ng');
+        $frontendUrl = config('app.frontend_url', 'https://venzy.vercel.app');
         $url = $frontendUrl . '/reset-password?token=' . $this->token . '&email=' . urlencode($this->email);
-        
-        return $this->view('emails.reset-password')
+
+        return $this->subject('Reset Your Password')
+                    ->markdown('emails.reset-password')
                     ->with([
-                        'url' => $url,
+                        'resetUrl' => $url,
                     ]);
     }
 }
