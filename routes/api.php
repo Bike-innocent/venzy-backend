@@ -17,7 +17,7 @@ use App\Http\Controllers\Product\SupplierController;
 use App\Http\Controllers\Order\CustomerOrderController;
 use App\Http\Controllers\Order\CartController;
 use App\Http\Controllers\Address\AddressController;
-
+use App\Http\Controllers\Profile\EmailUpdateController;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -53,11 +53,10 @@ Route::delete('/products/{product}', [ProductController::class, 'destroy']);
 Route::middleware('auth:sanctum')->group(function () {
     // User routes
     Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/user', [ProfileController::class, 'index']);
-
-
-
-
+    Route::post('/request-email-change', [EmailUpdateController::class, 'requestChange']);
+    Route::get('/user/profile', [ProfileController::class, 'index']);
+    Route::put('/user/update-name', [ProfileController::class, 'updateName']);
+    
 });
 
 
@@ -110,7 +109,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // });
 
- Route::get('/users', [UserController::class, 'index']);
+Route::get('/users', [UserController::class, 'index']);
 
 
 

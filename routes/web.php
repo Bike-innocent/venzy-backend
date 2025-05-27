@@ -1,12 +1,11 @@
 <?php
 
+use App\Http\Controllers\Profile\EmailUpdateController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Auth\SitemapController;
-// Route to generate the sitemap
-Route::get('/generate-sitemap', [SitemapController::class, 'generateSitemap']);
 
 // Home route
 Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('/user/verify-email-change/{token}', [EmailUpdateController::class, 'verifyChange']);
