@@ -49,28 +49,6 @@ class EmailUpdateController extends Controller
     /**
      * Verify the token and change the user's email if valid.
      */
-    // public function verifyChange($token)
-    // {
-    //     $pending = DB::table('pending_user_emails')->where('token', $token)->first();
-
-    //     if (!$pending || now()->greaterThan($pending->expires_at)) {
-    //         return response()->json(['message' => 'Invalid or expired verification token.'], 400);
-    //     }
-
-    //     $user = User::find($pending->user_id);
-    //     if (!$user) {
-    //         return response()->json(['message' => 'User not found.'], 404);
-    //     }
-
-    //     $user->email = $pending->new_email;
-    //     $user->email_verified_at = now(); // optional: re-verify the email
-    //     $user->save();
-
-    //     // Clean up pending request
-    //     DB::table('pending_user_emails')->where('id', $pending->id)->delete();
-
-    //     return response()->json(['message' => 'Email updated successfully.']);
-    // }
 
 
     public function verifyChange($token)
@@ -86,12 +64,19 @@ class EmailUpdateController extends Controller
             return redirect(config('app.frontend_url') . '/account/profile?status=error&message=User not found.');
         }
 
+        // Update the user's email
         $user->email = $pending->new_email;
         $user->email_verified_at = now();
         $user->save();
 
+        // Clean up
         DB::table('pending_user_emails')->where('id', $pending->id)->delete();
 
-        return redirect(config('app.frontend_url') . '/account/profile?status=success&message=Email updated successfully.');
+        // Auto-login: generate token
+        $user->load('roles', 'permissions'); // Optional if you need in frontend
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        // Redirect to frontend with token
+        return redirect(config('app.frontend_url') . '/auth/callback?token=' . $token);
     }
 }
