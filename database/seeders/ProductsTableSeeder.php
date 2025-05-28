@@ -13,6 +13,6 @@ class ProductsTableSeeder extends Seeder
     public function run(): void
     {
         // Create 20 products with associated relationships
-        Product::factory()->count(20)->create();
+        Product::factory()->count(50)->create();
     }
 }

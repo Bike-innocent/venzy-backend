@@ -53,7 +53,7 @@ class AddressFactory extends Factory
 
         return [
             'user_id' => $user->id,
-            'name' => $this->faker->name(),
+            // 'name' => $this->faker->name(),
             'address' => $this->faker->address(),
             'city' => $this->faker->city(),
             'state' => $this->faker->state(),

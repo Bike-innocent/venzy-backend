@@ -56,6 +56,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/request-email-change', [EmailUpdateController::class, 'requestChange']);
     Route::get('/user/profile', [ProfileController::class, 'index']);
     Route::put('/user/update-name', [ProfileController::class, 'updateName']);
+    Route::put('/user/update-phone', [ProfileController::class, 'updatePhone']);
     
 });
 
