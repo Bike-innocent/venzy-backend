@@ -28,11 +28,9 @@
 //     }
 // }
 
-
 namespace Database\Factories;
 
 use App\Models\User;
-use App\Models\Address;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -40,25 +38,24 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class AddressFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
-        // Check if the user already has any addresses
-        $user = User::factory()->create();
-
-
         return [
-            'user_id' => $user->id,
-            // 'name' => $this->faker->name(),
-            'address' => $this->faker->address(),
+            'user_id' => User::factory(), // Laravel will auto-create a user
+
+            'full_name' => $this->faker->name(),
+            'phone' => $this->faker->phoneNumber(),
+            'dial_code' => "+1",
+
+            'address_line_1' => $this->faker->streetAddress(),
+            'address_line_2' => $this->faker->optional()->secondaryAddress(),
+
             'city' => $this->faker->city(),
             'state' => $this->faker->state(),
-            'postal_code' => $this->faker->postcode(),
+            // 'postal_code' => $this->faker->postcode(),
             'country' => $this->faker->country(),
+
+            'is_default' => false, // optionally toggle true in a seeder
         ];
     }
 }

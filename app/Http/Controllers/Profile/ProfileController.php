@@ -23,7 +23,7 @@ class ProfileController extends Controller
 
         // return response()->json($user);
 
-        $user->load('roles', 'permissions');
+        $user->load('roles', 'permissions','addresses');
 
         return response()->json(['user' => $user], 201);
     }

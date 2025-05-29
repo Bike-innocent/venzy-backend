@@ -16,8 +16,9 @@ use App\Http\Controllers\Product\SizeController;
 use App\Http\Controllers\Product\SupplierController;
 use App\Http\Controllers\Order\CustomerOrderController;
 use App\Http\Controllers\Order\CartController;
-use App\Http\Controllers\Address\AddressController;
+// use App\Http\Controllers\Address\AddressController;
 use App\Http\Controllers\Profile\EmailUpdateController;
+use App\Http\Controllers\User\AddressController;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -57,7 +58,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user/profile', [ProfileController::class, 'index']);
     Route::put('/user/update-name', [ProfileController::class, 'updateName']);
     Route::put('/user/update-phone', [ProfileController::class, 'updatePhone']);
-    
+    Route::post('/user/create-address', [AddressController::class, 'store']);
+    Route::get('/user/addresses', [AddressController::class, 'index']);
+
 });
 
 
@@ -114,14 +117,14 @@ Route::get('/users', [UserController::class, 'index']);
 
 
 
-Route::middleware('auth:sanctum')->group(function () {
+// Route::middleware('auth:sanctum')->group(function () {
 
 
 
-    Route::get('/user-addresses', [AddressController::class, 'index']);
-    Route::get('/auth-user-addresses', [AddressController::class, 'authUserAddresses']);
-    Route::post('/addresses', [AddressController::class, 'store']);
-    Route::get('/addresses/{id}', [AddressController::class, 'show']);
-    Route::put('/addresses/{id}', [AddressController::class, 'update']);
-    Route::delete('/addresses/{id}', [AddressController::class, 'destroy']);
-});
+//     Route::get('/user-addresses', [AddressController::class, 'index']);
+//     Route::get('/auth-user-addresses', [AddressController::class, 'authUserAddresses']);
+//     Route::post('/addresses', [AddressController::class, 'store']);
+//     Route::get('/addresses/{id}', [AddressController::class, 'show']);
+//     Route::put('/addresses/{id}', [AddressController::class, 'update']);
+//     Route::delete('/addresses/{id}', [AddressController::class, 'destroy']);
+// });
