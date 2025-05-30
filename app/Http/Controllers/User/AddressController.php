@@ -14,13 +14,14 @@ class AddressController extends Controller
     public function index()
     {
         $addresses = Address::where('user_id', Auth::id())
-            ->latest()
+            ->orderByDesc('is_default')
+            ->orderByDesc('created_at')
             ->get();
 
         return response()->json($addresses);
     }
 
-    
+
     public function store(Request $request)
     {
         $request->validate([
@@ -37,9 +38,15 @@ class AddressController extends Controller
 
         $user = Auth::user();
 
-        // If this address is set as default, remove the default from others
-        if ($request->boolean('is_default')) {
+        $hasAddresses = Address::where('user_id', $user->id)->exists();
+
+        $setAsDefault = false;
+
+        // If user checked is_default OR they have no existing address, set this as default
+        if ($request->boolean('is_default') || !$hasAddresses) {
+            // Unset other default addresses if needed
             Address::where('user_id', $user->id)->update(['is_default' => false]);
+            $setAsDefault = true;
         }
 
         $address = Address::create([
@@ -52,12 +59,39 @@ class AddressController extends Controller
             'city' => $request->city,
             'state' => $request->state,
             'country' => $request->country,
-            'is_default' => $request->boolean('is_default'),
+            'is_default' => $setAsDefault,
         ]);
 
         return response()->json([
             'message' => 'Address saved successfully.',
             'data' => $address
         ], 201);
+    }
+
+
+    public function setDefault(Address $address)
+    {
+        $user = Auth::user();
+
+        if ($address->user_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        // Unset previous default
+        Address::where('user_id', $user->id)->update(['is_default' => false]);
+
+        // Set this one as default
+        $address->update(['is_default' => true]);
+
+        // Get updated list of addresses with default first
+        $addresses = Address::where('user_id', $user->id)
+            ->orderByDesc('is_default')
+            ->orderByDesc('created_at')
+            ->get();
+
+        return response()->json([
+            'message' => 'Default address updated.',
+            'data' => $addresses,
+        ]);
     }
 }
