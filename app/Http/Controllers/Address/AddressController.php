@@ -63,7 +63,14 @@ class AddressController extends Controller
     // Show a single address
     public function show($id)
     {
+
         $address = Address::find($id);
+
+        if ($address->user_id !== auth()->id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+
         if (!$address) {
             return response()->json(['message' => 'Address not found'], 404);
         }
@@ -75,7 +82,7 @@ class AddressController extends Controller
 
 
 
-     public function update(Request $request, Address $address)
+    public function update(Request $request, Address $address)
     {
 
 
@@ -133,6 +140,4 @@ class AddressController extends Controller
 
         return response()->json(['message' => 'Address deleted successfully.']);
     }
-
-
 }

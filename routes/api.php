@@ -60,6 +60,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/user/update-phone', [ProfileController::class, 'updatePhone']);
     Route::post('/user/create-address', [AddressController::class, 'store']);
     Route::get('/user/addresses', [AddressController::class, 'index']);
+    Route::get('/user/address/{id}', [AddressController::class, 'show']);
+    Route::put('/user/update-address/{id}', [AddressController::class, 'update']);
+
     Route::patch('/user/addresses/{address}/default', [AddressController::class, 'setDefault']);
 });
 
