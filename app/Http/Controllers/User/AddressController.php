@@ -178,4 +178,42 @@ class AddressController extends Controller
             'data' => $addresses,
         ]);
     }
+
+
+    public function destroy($id)
+    {
+        $address = Address::find($id);
+
+        if (!$address || $address->user_id !== auth()->id()) {
+            return response()->json(['message' => 'Unauthorized or address not found'], 403);
+        }
+
+        $wasDefault = $address->is_default;
+
+        // Delete the address
+        $address->delete();
+
+        // If it was default, assign another as default if exists
+        if ($wasDefault) {
+            $nextAddress = Address::where('user_id', auth()->id())
+                ->orderByDesc('created_at')
+                ->first();
+
+            if ($nextAddress) {
+                $nextAddress->update(['is_default' => true]);
+            }
+        }
+
+        $user = Auth::user();
+
+        $addresses = Address::where('user_id', $user->id)
+            ->orderByDesc('is_default')
+            ->orderByDesc('created_at')
+            ->get();
+
+        return response()->json([
+            'message' => 'Address deleted successfully.',
+            'data' => $addresses,
+        ]);
+    }
 }
