@@ -13,45 +13,54 @@ use App\Http\Controllers\Controller;
 
 class ProductController extends Controller
 {
-    // Fetch all products
-
-    // public function index()
-    // {
-    //     $products = Product::with(['category',  'colour', 'size',  'images', ])
-    //         ->get()
-    //         ->map(function ($product) {
-
-    //             // Set URLs for all images
-    //             $product->images = $product->images->map(function ($image) {
-    //                 $image->image_path = url('product-images/' . $image->image_path);
-    //                 return $image;
-    //             });
-    //             return $product;
-    //         });
-
-    //     return response()->json($products);
-    // }
 
 
 
     public function index(Request $request)
     {
-        // Default to 10 items per page, allow client to override
         $perPage = $request->get('per_page', 10);
 
-        // Fetch paginated products
-        $products = Product::with(['category', 'colour', 'size', 'images'])
+        $products = Product::with([
+            'category',
+            'brand',
+            'images',
+            'variants.variantValues.variantOptionValue.option'
+
+        ])
             ->paginate($perPage)
             ->through(function ($product) {
-                // Map image paths
+                // Attach full image URLs
                 $product->images = $product->images->map(function ($image) {
                     $image->image_path = url('product-images/' . $image->image_path);
                     return $image;
                 });
+
+
+
+                $product->variants = $product->variants->map(function ($variant) {
+                    $attributes = [];
+
+                    foreach ($variant->variantValues as $vv) {
+                        $optionValue = $vv->variantOptionValue;
+                        $option = $optionValue?->option;
+
+                        if ($option && $optionValue) {
+                            $attributes[$option->name] = $optionValue->value;
+                        }
+                    }
+
+                    $variant->attributes = $attributes;
+                    unset($variant->variantValues);
+
+                    return $variant;
+                });
+
+
+
                 return $product;
             });
 
-        // Return paginated response
+
         return response()->json([
             'data' => $products->items(),
             'meta' => [
@@ -62,6 +71,7 @@ class ProductController extends Controller
             ],
         ]);
     }
+
 
 
 
@@ -121,20 +131,42 @@ class ProductController extends Controller
     // Show a single product
     public function show($slug)
     {
-        $product = Product::where('slug', $slug)
-            ->with(['category', 'colour', 'size',  'images'])
+        $product = Product::with([
+            'category',
+            'brand',
+            'images',
+            'variants.variantValues.variantOptionValue.option'
+        ])
+            ->where('slug', $slug)
             ->firstOrFail();
 
-
-        // Set the URLs for all additional images
+        // Format image paths
         $product->images = $product->images->map(function ($image) {
             $image->image_path = url('product-images/' . $image->image_path);
             return $image;
         });
 
+        // Format variant attributes
+        $product->variants = $product->variants->map(function ($variant) {
+            $attributes = [];
+
+            foreach ($variant->variantValues as $vv) {
+                $optionValue = $vv->variantOptionValue;
+                $option = $optionValue?->option;
+
+                if ($option && $optionValue) {
+                    $attributes[$option->name] = $optionValue->value;
+                }
+            }
+
+            $variant->attributes = $attributes;
+            unset($variant->variantValues);
+
+            return $variant;
+        });
+
         return response()->json($product);
     }
-
 
 
 

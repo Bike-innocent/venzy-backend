@@ -6,10 +6,10 @@
 // php artisan make:migration create_user_addresses_table
 // php artisan make:migration create_product_categories_table
 // php artisan make:migration create_brands_table
-// php artisan make:migration create_colours_table
+// php artisan make:migration create_variant_options_table
 // php artisan make:migration create_sizes_table
 // php artisan make:migration create_suppliers_table
-// php artisan make:migration create_products_table
+// php artisan make:migration create_product_variant_values_table
 // php artisan make:migration create_order_items_table
 // php artisan make:migration create_customer_orders_table
 // php artisan make:migration create_customer_order_lines_table
@@ -79,3 +79,22 @@ php artisan make:migration create_product_variants_table
 //         return $this->belongsTo(Product::class);
 //     }
 // }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+php artisan make:factory VariantOptionValueFactory --model=VariantOptionValue

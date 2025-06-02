@@ -23,9 +23,8 @@ class DatabaseSeeder extends Seeder
             AddressesTableSeeder::class,
 
             CategorySeeder::class,
-            ColoursTableSeeder::class,
-            SizesTableSeeder::class,
-
+            BrandsTableSeeder::class,
+           
             ProductsTableSeeder::class,
 
             OrderSeeder::class,

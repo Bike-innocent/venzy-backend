@@ -38,16 +38,21 @@ class Product extends Model
         return $this->belongsTo(Category::class);
     }
 
-
-
-    public function colour()
+     public function brand()
     {
-        return $this->belongsTo(Colour::class);
+        return $this->belongsTo(Brand::class);
     }
 
-    public function size()
+
+
+     public function variants()
     {
-        return $this->belongsTo(Size::class);
+        return $this->hasMany(ProductVariant::class);
+    }
+
+    public function variantOptions()
+    {
+        return $this->belongsToMany(VariantOption::class, 'product_variant_options');
     }
 
 

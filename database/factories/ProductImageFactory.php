@@ -35,6 +35,7 @@ class ProductImageFactory extends Factory
         return [
             'product_id' => Product::inRandomOrder()->first()->id,
             'image_path' =>  $images[array_rand($images)],
+            'product_variant_id' => null, 
         ];
     }
 }
