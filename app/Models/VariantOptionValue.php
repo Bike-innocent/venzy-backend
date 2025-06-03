@@ -9,10 +9,7 @@ class VariantOptionValue extends Model
 {
     use HasFactory;
 
-    // public function option()
-    // {
-    //     return $this->belongsTo(VariantOption::class);
-    // }
+   
 
     public function productVariants()
     {

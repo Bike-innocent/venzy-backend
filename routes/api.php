@@ -16,6 +16,7 @@ use App\Http\Controllers\Product\SizeController;
 use App\Http\Controllers\Product\SupplierController;
 use App\Http\Controllers\Order\CustomerOrderController;
 use App\Http\Controllers\Order\CartController;
+use App\Http\Controllers\Product\VariantOptionController;
 // use App\Http\Controllers\Address\AddressController;
 use App\Http\Controllers\Profile\EmailUpdateController;
 use App\Http\Controllers\User\AddressController;
@@ -68,6 +69,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/user/addresses/{address}/default', [AddressController::class, 'setDefault']);
 });
 
+
+
+Route::get('/variant-options', [VariantOptionController::class, 'index']);
 
 
 
