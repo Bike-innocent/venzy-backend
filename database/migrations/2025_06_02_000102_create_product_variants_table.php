@@ -11,13 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
+
+
         Schema::create('product_variants', function (Blueprint $table) {
             $table->id();
             $table->foreignId('product_id')->constrained()->onDelete('cascade');
             $table->decimal('price', 10, 2);
             $table->integer('stock_quantity');
+            $table->string('combo_key'); // e.g., "Red - XL"
             $table->timestamps();
             $table->softDeletes();
+            $table->unique(['product_id', 'combo_key']); // Optional, prevents duplicate combinations
         });
     }
 

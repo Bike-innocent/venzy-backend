@@ -33,6 +33,8 @@ return new class extends Migration
             $table->string('name');
             $table->string('slug')->unique();
             $table->text('description');
+            $table->decimal('average_price', 10, 2)->nullable();
+            $table->decimal('compared_at_price', 10, 2)->nullable();
             $table->timestamps();
             $table->softDeletes();
         });
