@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class VariantOption extends Model
 {
     use HasFactory;
-
+        protected $guarded = [];
      public function values()
     {
         return $this->hasMany(VariantOptionValue::class);

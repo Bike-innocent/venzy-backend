@@ -9,7 +9,7 @@ class VariantOptionValue extends Model
 {
     use HasFactory;
 
-   
+    protected $guarded = [];
 
     public function productVariants()
     {

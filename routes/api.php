@@ -17,6 +17,7 @@ use App\Http\Controllers\Product\SupplierController;
 use App\Http\Controllers\Order\CustomerOrderController;
 use App\Http\Controllers\Order\CartController;
 use App\Http\Controllers\Product\VariantOptionController;
+use App\Http\Controllers\Product\VariantValueController;
 // use App\Http\Controllers\Address\AddressController;
 use App\Http\Controllers\Profile\EmailUpdateController;
 use App\Http\Controllers\User\AddressController;
@@ -72,6 +73,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
 Route::get('/variant-options', [VariantOptionController::class, 'index']);
+Route::post('/variant-option-values', [VariantValueController::class, 'store']);
+Route::put('/variant-option-values/{variantOptionValue}', [VariantValueController::class, 'update']);
+
+
 
 
 

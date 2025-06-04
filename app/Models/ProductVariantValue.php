@@ -8,17 +8,17 @@ use Illuminate\Database\Eloquent\Model;
 class ProductVariantValue extends Model
 {
     use HasFactory;
-
+    protected $guarded = [];
     public function variantOptionValue()
     {
         return $this->belongsTo(VariantOptionValue::class);
     }
-    
+
 
     public function productVariant()
     {
         return $this->belongsTo(ProductVariant::class);
     }
 
-    
+
 }
