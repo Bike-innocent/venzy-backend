@@ -9,6 +9,7 @@ class ProductVariantValue extends Model
 {
     use HasFactory;
     protected $guarded = [];
+    
     public function variantOptionValue()
     {
         return $this->belongsTo(VariantOptionValue::class);
@@ -19,6 +20,5 @@ class ProductVariantValue extends Model
     {
         return $this->belongsTo(ProductVariant::class);
     }
-
 
 }

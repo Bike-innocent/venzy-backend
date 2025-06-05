@@ -13,24 +13,6 @@ class Product extends Model
     use HasFactory, SoftDeletes;
     protected $guarded = [];
 
-    protected static function boot()
-    {
-        parent::boot();
-
-        // Automatically generate a unique slug when a product is created
-        static::creating(function ($product) {
-            $product->slug = self::generateUniqueSlug();
-        });
-    }
-
-    public static function generateUniqueSlug()
-    {
-        do {
-            $slug = Str::random(10);
-        } while (self::where('slug', $slug)->exists());
-
-        return $slug;
-    }
 
     // Define the relationships
     public function category()
@@ -38,23 +20,31 @@ class Product extends Model
         return $this->belongsTo(Category::class);
     }
 
-     public function brand()
+    public function brand()
     {
         return $this->belongsTo(Brand::class);
     }
 
 
 
-     public function variants()
+    public function variants()
     {
         return $this->hasMany(ProductVariant::class);
     }
 
-    public function variantOptions()
+
+
+    public function productVariantOptions()
     {
-        return $this->belongsToMany(VariantOption::class, 'product_variant_options');
+        return $this->hasMany(ProductVariantOption::class);
     }
 
+
+
+    public function variantValues()
+    {
+        return $this->hasMany(ProductVariantValue::class);
+    }
 
 
     public function images()
@@ -67,3 +57,46 @@ class Product extends Model
         return $this->hasMany(OrderItem::class);
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  // public function variantOptions()
+    // {
+    //     return $this->belongsToMany(VariantOption::class, 'product_variant_options');
+    // }
+
+
+    
+    // protected static function boot()
+    // {
+    //     parent::boot();
+
+    //     // Automatically generate a unique slug when a product is created
+    //     static::creating(function ($product) {
+    //         $product->slug = self::generateUniqueSlug();
+    //     });
+    // }
+
+    // public static function generateUniqueSlug()
+    // {
+    //     do {
+    //         $slug = Str::random(10);
+    //     } while (self::where('slug', $slug)->exists());
+
+    //     return $slug;
+    // }

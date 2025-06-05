@@ -237,7 +237,7 @@ class ProductsTableSeeder extends Seeder
                     $variant = ProductVariant::create([
                         'product_id' => $product->id,
                         'price' => $price,
-                        'stock_quantity' => fake()->numberBetween(1, 50),
+                        'stock' => fake()->numberBetween(1, 50),
                         'combo_key' => $comboKey,
                     ]);
 

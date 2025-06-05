@@ -2,12 +2,39 @@
 
 namespace App\Http\Controllers\Product;
 
+use App\Http\Controllers\Controller;
 use App\Models\Category;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 
-class ProductCategoryController extends Controller
+class CategoryController extends Controller
+
+
+
+
+
+
+
+
+
+
 {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     public function index()
     {
         return Category::all();
@@ -17,7 +44,6 @@ class ProductCategoryController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
         ]);
 
         $category = Category::create($validated);
@@ -33,7 +59,6 @@ class ProductCategoryController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
         ]);
 
         $productCategory->update($validated);
@@ -57,4 +82,15 @@ class ProductCategoryController extends Controller
             return response()->json(['message' => 'Category not found'], 404);
         }
     }
+
+
+
+
+
+
+
+
+
+
+
 }

@@ -16,6 +16,7 @@ use App\Http\Controllers\Product\SizeController;
 use App\Http\Controllers\Product\SupplierController;
 use App\Http\Controllers\Order\CustomerOrderController;
 use App\Http\Controllers\Order\CartController;
+use App\Http\Controllers\Product\CategoryController;
 use App\Http\Controllers\Product\VariantOptionController;
 use App\Http\Controllers\Product\VariantValueController;
 // use App\Http\Controllers\Address\AddressController;
@@ -79,8 +80,9 @@ Route::put('/variant-option-values/{variantOptionValue}', [VariantValueControlle
 
 
 
+Route::apiResource('categories', CategoryController::class);
+Route::apiResource('brands', CategoryController::class);
 
-Route::apiResource('product-categories', ProductCategoryController::class);
 
 
 // routes/api.php

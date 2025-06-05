@@ -17,7 +17,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('product_id')->constrained()->onDelete('cascade');
             $table->decimal('price', 10, 2);
-            $table->integer('stock_quantity');
+            $table->integer('stock');
             $table->string('combo_key'); // e.g., "Red - XL"
             $table->timestamps();
             $table->softDeletes();
