@@ -74,8 +74,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
 Route::get('/variant-options', [VariantOptionController::class, 'index']);
+Route::post('/variant-options', [VariantOptionController::class, 'store']);
+Route::put('/variant-options/{variantOption}', [VariantOptionController::class, 'update']);
+Route::get('/variant-options/{id}/values', [VariantOptionController::class, 'getValues']);
+
 Route::post('/variant-option-values', [VariantValueController::class, 'store']);
 Route::put('/variant-option-values/{variantOptionValue}', [VariantValueController::class, 'update']);
+
 
 
 

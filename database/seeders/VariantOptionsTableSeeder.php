@@ -13,7 +13,7 @@ class VariantOptionsTableSeeder extends Seeder
     public function run(): void
     {
         $data = [
-            'Color' => ['Red', 'Blue', 'Green', 'Black', 'White', 'Yellow', 'Purple'],
+            'Colour' => ['Red', 'Blue', 'Green', 'Black', 'White', 'Yellow', 'Purple'],
             'Size' => ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
             'Material' => ['Cotton', 'Polyester', 'Wool', 'Linen', 'Silk'],
             'Style' => ['Casual', 'Formal', 'Sport', 'Vintage'],
@@ -28,7 +28,7 @@ class VariantOptionsTableSeeder extends Seeder
                     'variant_option_id' => $option->id,
                     'value' => $value,
                 ], [
-                    'hex_code' => $optionName === 'Color' ? fake()->hexColor() : null,
+                    'hex_code' => $optionName === 'Colour' ? fake()->hexColor() : null,
                 ]);
             }
         }

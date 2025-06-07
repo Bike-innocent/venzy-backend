@@ -18,4 +18,36 @@ class VariantOptionController extends Controller
 
         return response()->json($variantOptions);
     }
+
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|unique:variant_options,name',
+        ]);
+
+        $option = VariantOption::create($validated);
+        return response()->json($option, 201);
+    }
+
+
+    public function update(Request $request, VariantOption $variantOption)
+    {
+        $request->validate([
+            'name' => 'required|string|unique:variant_options,name',
+        ]);
+
+        $variantOption->update([
+            'name' => $request->name,
+
+        ]);
+
+        return response()->json($variantOption);
+    }
+
+    public function getValues($id)
+    {
+        $option = VariantOption::with('values')->findOrFail($id);
+        return response()->json($option->values);
+    }
 }

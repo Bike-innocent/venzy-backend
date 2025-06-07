@@ -161,12 +161,17 @@ class ProductController extends Controller
             //product table
             'name' => 'required|string|max:255',
             'description' => 'required|string',
-            'average_price' => 'nullable|integer',
+            'stock' => 'required|integer',
+            'average_price' => 'required|integer',
             'compared_at_price' => 'nullable|integer',
             'category_id' => 'required|exists:categories,id',
             'brand_id' => 'nullable|exists:brands,id',
+            'status' => 'required|in:0,1',
+
+
             //product_images table
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'images' => 'required|array|min:2',
+            'images.*' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
             //'product_variant_options
             'product_variant_options' => 'array',
             'product_variant_options.*.variant_option_id' => 'required|exists:variant_options,id',
@@ -194,8 +199,10 @@ class ProductController extends Controller
                 'description' => $validated['description'],
                 'category_id' => $validated['category_id'],
                 'brand_id' => $validated['brand_id'] ?? null,
+                'stock' => $validated['stock'],
                 'average_price' => $validated['average_price'] ?? null,
                 'compared_at_price' => $validated['compared_at_price'] ?? null,
+                'status' => $validated['status'],
             ]);
 
 
@@ -214,7 +221,8 @@ class ProductController extends Controller
 
             // Save product variant options
             $variantOptionMap = [];
-            foreach ($validated['product_variant_options'] as $option) {
+            // foreach ($validated['product_variant_options'] as $option) {
+            foreach ($validated['product_variant_options'] ?? [] as $option) {
 
                 $variantOption = $product->productVariantOptions()->create([
                     'variant_option_id' => $option['variant_option_id'],
@@ -227,7 +235,8 @@ class ProductController extends Controller
 
             // Save product variants
             $variantMap = [];
-            foreach ($validated['product_variants'] as $variant) {
+            // foreach ($validated['product_variants'] as $variant) {
+            foreach ($validated['product_variants'] ?? [] as $variant) {
                 $pv = $product->variants()->create([
                     'combo_key' => $variant['comboKey'],
                     'price' => $variant['price'],
@@ -236,16 +245,10 @@ class ProductController extends Controller
                 $variantMap[$variant['index']] = $pv->id;
             }
 
-            // Save product variant values
+
+
             // foreach ($validated['product_variant_values'] as $value) {
-            //     $product->productVariantValues()->create([
-            //         'product_variant_id' => $variantMap[$value['product_variant_id']],
-            //         'variant_option_value_id' => $value['variant_option_value_id'],
-            //     ]);
-            // }
-
-
-            foreach ($validated['product_variant_values'] as $value) {
+            foreach ($validated['product_variant_values'] ?? [] as $value) {
                 ProductVariantValue::create([
                     'product_variant_id' => $variantMap[$value['product_variant_id']],
                     'variant_option_value_id' => $value['variant_option_value_id'],

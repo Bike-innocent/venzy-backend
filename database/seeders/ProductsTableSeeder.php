@@ -251,16 +251,7 @@ class ProductsTableSeeder extends Seeder
                     $prices[] = $price;
                 }
 
-                // Calculate average price
-                if (count($prices)) {
-                    $avgPrice = round(array_sum($prices) / count($prices), 2);
-                    $compared = round($avgPrice * fake()->randomFloat(2, 1.05, 1.3), 2);
-
-                    $product->update([
-                        'average_price' => $avgPrice,
-                        'compared_at_price' => $compared,
-                    ]);
-                }
+              
             });
         });
     }

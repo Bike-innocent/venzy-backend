@@ -24,20 +24,16 @@ class ProductFactory extends Factory
     {
 
         return [
-            // 'name' => $this->faker->word,
-            // 'slug' => Str::random(10),
-            // 'category_id' => Category::factory(),
-            // 'colour_id' => Colour::factory(),
-            // 'size_id' => Size::factory(),
-            // 'description' => $this->faker->paragraph,
-            // 'price' => $this->faker->randomFloat(2, 10, 1000),
-            // 'stock_quantity' => $this->faker->numberBetween(1, 100),
 
             'name' => $this->faker->word,
             'slug' => Str::random(10),
-             'category_id' => \App\Models\Category::factory(),
+            'category_id' => \App\Models\Category::factory(),
             'brand_id' => \App\Models\Brand::factory(),
             'description' => $this->faker->paragraph,
+            'status' => "1",
+            'stock' => "100",
+            'average_price' => fake()->randomFloat(2, 20, 1000),
+            'compared_at_price' => fake()->randomFloat(2, 20, 1000),
         ];
     }
 }
