@@ -86,7 +86,7 @@ Route::put('/variant-option-values/{variantOptionValue}', [VariantValueControlle
 
 
 Route::apiResource('categories', CategoryController::class);
-Route::apiResource('brands', CategoryController::class);
+Route::apiResource('brands', BrandController::class);
 
 
 

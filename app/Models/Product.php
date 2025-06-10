@@ -14,6 +14,28 @@ class Product extends Model
     protected $guarded = [];
 
 
+
+    
+    
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Automatically generate a unique slug when a product is created
+        static::creating(function ($product) {
+            $product->slug = self::generateUniqueSlug();
+        });
+    }
+
+    public static function generateUniqueSlug()
+    {
+        do {
+            $slug = Str::random(10);
+        } while (self::where('slug', $slug)->exists());
+
+        return $slug;
+    }
+
     // Define the relationships
     public function category()
     {
@@ -78,25 +100,4 @@ class Product extends Model
   // public function variantOptions()
     // {
     //     return $this->belongsToMany(VariantOption::class, 'product_variant_options');
-    // }
-
-
-    
-    // protected static function boot()
-    // {
-    //     parent::boot();
-
-    //     // Automatically generate a unique slug when a product is created
-    //     static::creating(function ($product) {
-    //         $product->slug = self::generateUniqueSlug();
-    //     });
-    // }
-
-    // public static function generateUniqueSlug()
-    // {
-    //     do {
-    //         $slug = Str::random(10);
-    //     } while (self::where('slug', $slug)->exists());
-
-    //     return $slug;
     // }

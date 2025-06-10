@@ -20,7 +20,6 @@ return new class extends Migration
             $table->integer('stock');
             $table->string('combo_key'); // e.g., "Red - XL"
             $table->timestamps();
-            $table->softDeletes();
             $table->unique(['product_id', 'combo_key']); // Optional, prevents duplicate combinations
         });
     }
