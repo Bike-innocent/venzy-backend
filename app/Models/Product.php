@@ -15,8 +15,8 @@ class Product extends Model
 
 
 
-    
-    
+
+
     protected static function boot()
     {
         parent::boot();
@@ -56,6 +56,8 @@ class Product extends Model
 
 
 
+
+
     public function productVariantOptions()
     {
         return $this->hasMany(ProductVariantOption::class);
@@ -67,6 +69,13 @@ class Product extends Model
     {
         return $this->hasMany(ProductVariantValue::class);
     }
+
+
+    public function variantOptions()
+{
+    return $this->belongsToMany(VariantOption::class, 'product_variant_options')
+                ->with('values'); // 👈 Eager load the values
+}
 
 
     public function images()

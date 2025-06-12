@@ -597,12 +597,12 @@ class ProductController extends Controller
             'product_variants.*.stock' => 'required|integer',
             'product_variants.*.index' => 'required|integer',
 
-            // Variant values
-            'product_variant_values' => 'array',
-            // 'product_variant_values.*.product_variant_id' => 'required|integer',
-            'product_variant_values.*.comboKey' => 'required|string',
 
-            'product_variant_values.*.variant_option_value_id' => 'required|exists:variant_option_values,id',
+            'product_variant_values' => 'nullable|array',
+            'product_variant_values.*.comboKey' => 'required_with:product_variant_values|string',
+            'product_variant_values.*.variant_option_value_id' => 'required_with:product_variant_values|exists:variant_option_values,id',
+
+
         ]);
 
         DB::beginTransaction();
@@ -629,10 +629,7 @@ class ProductController extends Controller
             $this->syncProductVariantOptions($product, $validated['product_variant_options'] ?? []);
 
             // 4. Sync product variants without deleting shared data
-            $variantMap = $this->syncProductVariants($product, $validated['product_variants'] ?? []);
-
-            // 5. Sync variant values safely (delete existing and reinsert for *this* product variant)
-            $this->syncVariantValues($variantMap, $validated['product_variant_values'] ?? []);
+            $this->syncVariants($product, $validated);
 
             DB::commit();
 
@@ -646,19 +643,43 @@ class ProductController extends Controller
 
 
 
+    // protected function syncProductImages($product, $validated, $request)
+    // {
+    //     if (!empty($validated['deleted_images'])) {
+    //         foreach ($validated['deleted_images'] as $imgPath) {
+    //             $image = $product->images()->where('image_path', $imgPath)->first();
+    //             if ($image) {
+    //                 $image->delete();
+    //                 $fullPath = public_path('product-images/' . $imgPath);
+    //                 if (file_exists($fullPath)) {
+    //                     unlink($fullPath);
+    //                 }
+    //             }
+    //         }
+    //     }
+
+
+
+    //     if ($request->hasFile('new_images')) {
+    //         foreach ($request->file('new_images') as $image) {
+    //             $filename = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+    //             $image->move(public_path('product-images'), $filename);
+    //             $product->images()->create(['image_path' => $filename]);
+    //         }
+    //     }
+    // }
+
+
     protected function syncProductImages($product, $validated, $request)
     {
         if (!empty($validated['deleted_images'])) {
-            foreach ($validated['deleted_images'] as $imgPath) {
-                $image = $product->images()->where('image_path', $imgPath)->first();
-                if ($image) {
-                    $image->delete();
-                    $fullPath = public_path('product-images/' . $imgPath);
-                    if (file_exists($fullPath)) {
-                        unlink($fullPath);
-                    }
+            $product->images()->whereIn('id', $validated['deleted_images'])->get()->each(function ($image) {
+                $fullPath = public_path('product-images/' . $image->image_path);
+                if (file_exists($fullPath)) {
+                    unlink($fullPath);
                 }
-            }
+                $image->delete();
+            });
         }
 
         if ($request->hasFile('new_images')) {
@@ -671,6 +692,47 @@ class ProductController extends Controller
     }
 
 
+    //         if ($request->has('deleted_images')) {
+    //     $deletedImageIds = $request->input('deleted_images');
+    //     $product->images()->whereIn('id', $deletedImageIds)->delete();
+    // }
+
+    // protected function syncProductImages($product, $validated, $request)
+    // {
+    //     if (!empty($validated['deleted_images'])) {
+    //         foreach ($validated['deleted_images'] as $imgPath) {
+    //             // If the image path includes storage path, extract only the filename
+    //             $filename = basename($imgPath); // Only get the file name
+
+    //             $image = $product->images()->where('image_path', $imgPath)->first();
+
+    //             if ($image) {
+    //                 $image->delete();
+
+    //                 $fullPath = public_path('product-images/' . $filename);
+
+    //                 if (file_exists($fullPath)) {
+    //                     unlink($fullPath);
+    //                 }
+    //             }
+
+    //             logger('Trying to delete:', ['path' => $imgPath, 'full' => $fullPath]);
+
+    //         }
+    //     }
+
+    //     // Save new images
+    //     if ($request->hasFile('new_images')) {
+    //         foreach ($request->file('new_images') as $imageFile) {
+    //             $filename = uniqid() . '.' . $imageFile->getClientOriginalExtension();
+    //             $imageFile->move(public_path('product-images'), $filename);
+
+    //             $product->images()->create(['image_path' => 'product-images/' . $filename]);
+    //         }
+    //     }
+    // }
+
+
 
 
 
@@ -678,77 +740,75 @@ class ProductController extends Controller
 
 
     protected function syncProductVariantOptions($product, $newOptions)
-{
-    $existing = $product->productVariantOptions()->pluck('variant_option_id')->toArray();
-    $incoming = collect($newOptions)->pluck('variant_option_id')->toArray();
-
-    $toDetach = array_diff($existing, $incoming);
-    $toAttach = array_diff($incoming, $existing);
-
-    if (!empty($toDetach)) {
-        // First delete related variant values
-        $variantIds = $product->variants()->pluck('id');
-        ProductVariantValue::whereIn('product_variant_id', $variantIds)
-            ->whereIn('variant_option_value_id', function ($query) use ($toDetach) {
-                $query->select('id')
-                      ->from('variant_option_values')
-                      ->whereIn('variant_option_id', $toDetach);
-            })->delete();
-
-        // Now safely delete product variant options
-        $product->productVariantOptions()->whereIn('variant_option_id', $toDetach)->delete();
-    }
-
-    foreach ($toAttach as $id) {
-        $product->productVariantOptions()->create(['variant_option_id' => $id]);
-    }
-}
-
-
-
-
-
-
-
-
-
-    protected function syncProductVariants($product, $newVariants)
     {
+        $existing = $product->productVariantOptions()->pluck('variant_option_id')->toArray();
+        $incoming = collect($newOptions)->pluck('variant_option_id')->toArray();
+
+        $toDetach = array_diff($existing, $incoming);
+        $toAttach = array_diff($incoming, $existing);
+
+        if (!empty($toDetach)) {
+
+
+
+
+            $product->productVariantOptions()
+                ->whereIn('variant_option_id', $toDetach)
+                ->get()
+                ->each(function ($pivot) {
+                    $pivot->delete(); // ✅ Deletes only pivot/related row, not the referenced value
+                });
+        }
+
+        foreach ($toAttach as $id) {
+            $product->productVariantOptions()->create(['variant_option_id' => $id]);
+        }
+    }
+
+
+
+
+
+    protected function syncVariants($product, $validated)
+    {
+        $incomingVariants = collect($validated['product_variants'] ?? []);
+        $incomingValues = collect($validated['product_variant_values'] ?? []); // ✅ Prevent undefined key error
+        $incomingKeys = $incomingVariants->pluck('comboKey')->all();
+
+        // Step 1: Delete removed variants & their values
+        $existingVariants = $product->variants()->get();
+        foreach ($existingVariants as $variant) {
+            if (!in_array($variant->combo_key, $incomingKeys)) {
+                $variant->variantValues()->delete();
+                $variant->delete();
+            }
+        }
+
+        // Step 2: Upsert variants and track their IDs
         $variantMap = [];
-        $existing = $product->variants()->get()->keyBy('combo_key');
-        $newComboKeys = [];
-
-        foreach ($newVariants as $variant) {
-            $key = $variant['comboKey'];
-            $newComboKeys[] = $key;
-
-            if ($existing->has($key)) {
-                $existingVariant = $existing[$key];
-                $existingVariant->update([
-                    'price' => $variant['price'],
-                    'stock' => $variant['stock'],
-                ]);
-                $variantMap[$key] = $existingVariant->id;
-
-                // $existingVariant->values()->delete();
-            } else {
-                $created = $product->variants()->create([
-                    'combo_key' => $key,
-                    'price' => $variant['price'],
-                    'stock' => $variant['stock'],
-                ]);
-                $variantMap[$key] = $created->id;
-            }
+        foreach ($incomingVariants as $variantData) {
+            $variant = $product->variants()->updateOrCreate(
+                ['combo_key' => $variantData['comboKey']],
+                [
+                    'price' => $variantData['price'],
+                    'stock' => $variantData['stock']
+                ]
+            );
+            $variantMap[$variantData['comboKey']] = $variant->id;
         }
 
-        $product->variants()->whereNotIn('combo_key', $newComboKeys)->get()->each(function ($v) {
-            $v->values()->delete();
-            $v->delete();
-        });
+        // Step 3: Clear and re-insert variant values for each combo
+        foreach ($variantMap as $comboKey => $variantId) {
+            ProductVariantValue::where('product_variant_id', $variantId)->delete();
 
-        
-
-        return $variantMap;
+            $valuesForCombo = $incomingValues->where('comboKey', $comboKey);
+            foreach ($valuesForCombo as $valueData) {
+                ProductVariantValue::create([
+                    'product_variant_id' => $variantId,
+                    'variant_option_value_id' => $valueData['variant_option_value_id'],
+                ]);
+            }
+        }
     }
 
 
@@ -760,305 +820,10 @@ class ProductController extends Controller
 
 
 
-protected function syncVariantValues($variantMap, $values)
-{
-    // Group all values by their comboKey
-    $grouped = collect($values)->groupBy('comboKey');
 
-    foreach ($grouped as $comboKey => $valueGroup) {
-        if (!isset($variantMap[$comboKey])) {
-            throw new \Exception("Invalid variant key: $comboKey");
-        }
 
-        $variantId = $variantMap[$comboKey];
 
-        // Delete existing values for this variant
-        ProductVariantValue::where('product_variant_id', $variantId)->delete();
-
-        foreach ($valueGroup as $value) {
-            $valid = DB::table('variant_option_values')
-                ->where('id', $value['variant_option_value_id'])
-                ->exists();
-
-            if (!$valid) {
-                throw new \Exception("Variant option value ID {$value['variant_option_value_id']} does not exist.");
-            }
-
-            ProductVariantValue::create([
-                'product_variant_id' => $variantId,
-                'variant_option_value_id' => $value['variant_option_value_id'],
-            ]);
-        }
-    }
-}
-
-
-
-    // protected function syncVariantValues($variantMap, $values)
-    // {
-    //     foreach ($values as $value) {
-    //         $comboKey = $value['comboKey'];
-
-    //         if (!isset($variantMap[$comboKey])) {
-    //             throw new \Exception("Invalid variant key: $comboKey");
-    //         }
-
-    //         $valid = DB::table('variant_option_values')
-    //             ->where('id', $value['variant_option_value_id'])
-    //             ->exists();
-
-    //         if (!$valid) {
-    //             throw new \Exception("Variant option value ID {$value['variant_option_value_id']} does not exist.");
-    //         }
-
-    //         ProductVariantValue::create([
-    //             'product_variant_id' => $variantMap[$comboKey],
-    //             'variant_option_value_id' => $value['variant_option_value_id'],
-    //         ]);
-    //     }
-    // }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-   // protected function syncProductVariants($product, $newVariants)
-    // {
-    //     $variantMap = [];
-    //     $existing = $product->variants()->get()->keyBy('combo_key');
-
-    //     $newComboKeys = [];
-
-    //     foreach ($newVariants as $variant) {
-    //         $key = $variant['comboKey'];
-    //         $newComboKeys[] = $key;
-
-    //         if ($existing->has($key)) {
-    //             $existingVariant = $existing[$key];
-    //             $existingVariant->update([
-    //                 'price' => $variant['price'],
-    //                 'stock' => $variant['stock'],
-    //             ]);
-    //             $variantMap[$variant['index']] = $existingVariant->id;
-
-    //             $existingVariant->values()->delete();
-    //         } else {
-    //             $created = $product->variants()->create([
-    //                 'combo_key' => $key,
-    //                 'price' => $variant['price'],
-    //                 'stock' => $variant['stock'],
-    //             ]);
-    //             $variantMap[$variant['index']] = $created->id;
-    //         }
-    //     }
-
-    //     // Delete only product variants that are no longer used
-    //     $product->variants()->whereNotIn('combo_key', $newComboKeys)->get()->each(function ($v) {
-    //         $v->values()->delete();
-    //         $v->delete(); // no force delete
-    //     });
-
-    //     return $variantMap;
-    // }
-
-
-
-
-
-
-    // protected function syncVariantValues($variantMap, $values)
-    // {
-    //     foreach ($values as $value) {
-    //         $variantIndex = $value['product_variant_id'];
-
-    //         if (!isset($variantMap[$variantIndex])) {
-    //             throw new \Exception("Invalid variant index: $variantIndex");
-    //         }
-
-    //         // ✅ Ensure the variant_option_value_id exists
-    //         $valid = DB::table('variant_option_values')->where('id', $value['variant_option_value_id'])->exists();
-    //         if (!$valid) {
-    //             throw new \Exception("Variant option value ID {$value['variant_option_value_id']} does not exist.");
-    //         }
-
-    //         ProductVariantValue::create([
-    //             'product_variant_id' => $variantMap[$variantIndex],
-    //             'variant_option_value_id' => $value['variant_option_value_id'],
-    //         ]);
-    //     }
-    // }
-
-
-
-
-
-
-
-
-
-
-
-    // protected function syncVariantValues($variantMap, $values)
-    // {
-    //     foreach ($values as $value) {
-    //         $variantIndex = $value['product_variant_id'];
-    //         if (!isset($variantMap[$variantIndex])) {
-    //             throw new \Exception("Invalid variant index: $variantIndex");
-    //         }
-
-    //         ProductVariantValue::create([
-    //             'product_variant_id' => $variantMap[$variantIndex],
-    //             'variant_option_value_id' => $value['variant_option_value_id'],
-    //         ]);
-    //     }
-    // }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    // // Show a single product
-    // public function show($slug)
-    // {
-    //     $product = Product::with([
-    //         'category',
-    //         'brand',
-    //         'images',
-    //         'variants.variantValues.variantOptionValue.option'
-    //     ])
-    //         ->where('slug', $slug)
-    //         ->firstOrFail();
-
-    //     // Format image paths
-    //     $product->images = $product->images->map(function ($image) {
-    //         $image->image_path = url('product-images/' . $image->image_path);
-    //         return $image;
-    //     });
-
-    //     // Format variant attributes
-    //     $product->variants = $product->variants->map(function ($variant) {
-    //         $attributes = [];
-
-    //         foreach ($variant->variantValues as $vv) {
-    //             $optionValue = $vv->variantOptionValue;
-    //             $option = $optionValue?->option;
-
-    //             if ($option && $optionValue) {
-    //                 $attributes[$option->name] = $optionValue->value;
-    //             }
-    //         }
-
-    //         $variant->attributes = $attributes;
-    //         unset($variant->variantValues);
-
-    //         return $variant;
-    //     });
-
-    //     return response()->json($product);
-    // }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    // public function show($slug)
-    // {
-    //     $product = Product::with([
-    //         'category',
-    //         'brand',
-    //         'images',
-    //         'variants.variantValues.variantOptionValue.option'
-    //     ])
-    //         ->where('slug', $slug)
-    //         ->firstOrFail();
-
-    //     // Format image paths
-    //     $product->images = $product->images->map(function ($image) {
-    //         $image->image_path = url('product-images/' . $image->image_path);
-    //         return $image;
-    //     });
-
-    //     // Format variant attributes
-    //     $product->variants = $product->variants->map(function ($variant) {
-    //         $attributes = [];
-
-    //         foreach ($variant->variantValues as $vv) {
-    //             $optionValue = $vv->variantOptionValue;
-    //             $option = $optionValue?->option;
-
-    //             if ($option && $optionValue) {
-    //                 $attributes[$option->name] = $optionValue->value;
-    //             }
-    //         }
-
-    //         $variant->attributes = $attributes;
-    //         unset($variant->variantValues);
-
-    //         return $variant;
-    //     });
-
-    //     // Fetch variant options related to this product
-    //     $variantOptionIds = $product->productVariantOptions()->pluck('variant_option_id');
-
-    //     $variantOptions = VariantOption::with('values')
-    //         ->whereIn('id', $variantOptionIds)
-    //         ->get();
-
-    //     // Add variant_options to the response
-    //     $product->variant_options = $variantOptions;
-
-    //     return response()->json($product);
-    // }
-
-
-
-
-
+    // 'variantOptions.values',
 
 
 
@@ -1069,10 +834,10 @@ protected function syncVariantValues($variantMap, $values)
             'category',
             'brand',
             'images',
-            'variants.variantValues.variantOptionValue.option'
-        ])
-            ->where('slug', $slug)
-            ->firstOrFail();
+            'variants.variantValues.variantOptionValue.variantOption',
+            // 'productVariantOptions.variantOption',
+        ])->where('slug', $slug)->firstOrFail();
+
 
         // Format image paths
         $product->images = $product->images->map(function ($image) {
@@ -1080,7 +845,8 @@ protected function syncVariantValues($variantMap, $values)
             return $image;
         });
 
-        // Format variant attributes
+
+
         $product->variants = $product->variants->map(function ($variant) {
             $attributes = [];
 
@@ -1094,92 +860,38 @@ protected function syncVariantValues($variantMap, $values)
             }
 
             $variant->attributes = $attributes;
-            unset($variant->variantValues);
-
+            unset($variant->variantValues); // Optional cleanup
             return $variant;
         });
 
-        // Get all variant_option_ids linked to this product
+
+
+
+        // Get variant options with only values used by this product
         $variantOptionIds = $product->productVariantOptions()->pluck('variant_option_id');
 
-        // Get all used variant_option_value_ids from this product's variants
         $usedValueIds = DB::table('product_variant_values')
             ->join('product_variants', 'product_variant_values.product_variant_id', '=', 'product_variants.id')
             ->where('product_variants.product_id', $product->id)
             ->pluck('variant_option_value_id')
             ->unique();
 
-        // Fetch only options + their used values
-        $variantOptions = VariantOption::with(['values' => function ($query) use ($usedValueIds) {
-            $query->whereIn('id', $usedValueIds);
-        }])
-            ->whereIn('id', $variantOptionIds)
-            ->get();
+        // $variantOptions = \App\Models\VariantOption::with(['values' => function ($query) use ($usedValueIds) {
+        //     $query->whereIn('id', $usedValueIds);
+        // }])->whereIn('id', $variantOptionIds)->get();
 
-        $product->variant_options = $variantOptions;
+        // $product->variant_options = $variantOptions;
+
+        $variantOptions = \App\Models\VariantOption::with(['values' => function ($query) use ($usedValueIds) {
+            $query->whereIn('id', $usedValueIds);
+        }])->whereIn('id', $variantOptionIds)->get();
+
+        $product->setRelation('variant_options', $variantOptions); // or $product->variant_options = $variantOptions
+
 
         return response()->json($product);
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    // public function update(Request $request, $slug)
-    // {
-    //     $product = Product::where('slug', $slug)->firstOrFail();
-
-    //     // Validate the incoming request data
-    //     $validated = $request->validate([
-    //         'name' => 'required|string|max:255',
-    //         'category_id' => 'required|exists:categories,id',
-    //         'colour_id' => 'required|exists:colours,id',
-    //         'size_id' => 'required|exists:sizes,id',
-    //         'description' => 'required|string',
-    //         'price' => 'required|numeric',
-    //         'stock_quantity' => 'required|integer',
-    //         'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
-    //         'deleted_images' => 'array', // Array of image IDs to be deleted
-    //     ]);
-
-    //     // Update product fields except 'images'
-    //     $productData = collect($validated)->except(['images', 'deleted_images',])->toArray();
-    //     $product->update($productData);
-
-    //     // Handle deleted images
-    //     if ($request->has('deleted_images')) {
-    //         $deletedImageIds = $request->input('deleted_images');
-    //         $product->images()->whereIn('id', $deletedImageIds)->delete();
-    //     }
-
-    //     // Handle new images
-    //     if ($request->hasFile('new_images')) {
-    //         foreach ($request->file('new_images') as $key => $image) {
-    //             // Generate a unique filename with timestamp and original extension
-    //             $filename = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-
-    //             // Move the image to 'public/product-images' folder
-    //             $image->move(public_path('product-images'), $filename);
-
-    //             // Save the new image in the database
-    //             $newImage = $product->images()->create([
-    //                 'image_path' => $filename, // Store only the filename
-    //             ]);
-    //         }
-    //     }
-
-    //     return response()->json(['message' => 'Product updated successfully.']);
-    // }
 
 
 
