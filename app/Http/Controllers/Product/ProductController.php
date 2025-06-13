@@ -704,20 +704,28 @@ class ProductController extends Controller
 
 
 
-
-
-
-
 protected function syncVariants($product, $validated)
 {
     $incomingVariants = collect($validated['product_variants'] ?? []);
     $incomingValues = collect($validated['product_variant_values'] ?? []);
-    $incomingKeys = $incomingVariants->pluck('comboKey')->all();
 
+    // Sync product variants
+    $this->syncProductVariants($product, $incomingVariants);
+
+    // Sync product variant values
+    $this->syncProductVariantValues($product, $incomingValues);
+}
+
+
+
+protected function syncProductVariants($product, $incomingVariants)
+{
     $existingVariants = $product->variants()->get();
 
-    // Identify variants to delete
     $existingKeys = $existingVariants->pluck('combo_key')->all();
+    $incomingKeys = $incomingVariants->pluck('comboKey')->all();
+
+    // Variants to delete (not in incoming)
     $keysToDelete = array_diff($existingKeys, $incomingKeys);
     $variantsToDelete = $existingVariants->filter(function ($variant) use ($keysToDelete) {
         return in_array($variant->combo_key, $keysToDelete);
@@ -725,16 +733,16 @@ protected function syncVariants($product, $validated)
 
     $variantIdsToDelete = $variantsToDelete->pluck('id')->all();
 
-    // Delete related variant values in chunks
+    // Chunked delete for large datasets
     if (!empty($variantIdsToDelete)) {
         $chunks = array_chunk($variantIdsToDelete, 1000);
         foreach ($chunks as $chunk) {
-            ProductVariantValue::whereIn('product_variant_id', $chunk)->delete();
             ProductVariant::whereIn('id', $chunk)->delete();
+            ProductVariantValue::whereIn('product_variant_id', $chunk)->delete();
         }
     }
 
-    // Upsert variants
+    // Upsert (update or create) incoming variants
     $variantMap = [];
     foreach ($incomingVariants as $variantData) {
         $variant = $product->variants()->updateOrCreate(
@@ -746,31 +754,242 @@ protected function syncVariants($product, $validated)
         );
         $variantMap[$variantData['comboKey']] = $variant->id;
     }
+}
 
-    // Recreate variant values
-    foreach ($variantMap as $comboKey => $variantId) {
-        // Delete existing values in chunks
-        $valuesIds = $incomingValues->where('comboKey', $comboKey)
-            ->pluck('variant_option_value_id')
-            ->all();
 
-        // Remove previous values
+
+protected function syncProductVariantValues($product, $incomingValues)
+{
+    // Group incoming values by comboKey
+    $groupedValues = $incomingValues->groupBy('comboKey');
+
+    foreach ($groupedValues as $comboKey => $values) {
+        // Find the related variant ID
+        $variant = $product->variants()->where('combo_key', $comboKey)->first();
+        if (!$variant) {
+            continue; // or handle missing variant
+        }
+
+        $variantId = $variant->id;
+
+        // Delete previous values for this variant
         ProductVariantValue::where('product_variant_id', $variantId)->delete();
 
-        // Insert new values
-        $valuesForCombo = $incomingValues->where('comboKey', $comboKey);
+        // Prepare bulk insert
         $insertData = [];
-        foreach ($valuesForCombo as $valueData) {
+        foreach ($values as $valueData) {
             $insertData[] = [
                 'product_variant_id' => $variantId,
                 'variant_option_value_id' => $valueData['variant_option_value_id'],
             ];
         }
+
         if (!empty($insertData)) {
             ProductVariantValue::insert($insertData);
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// protected function syncVariants($product, $validated)
+// {
+//     $incomingVariants = collect($validated['product_variants'] ?? []);
+//     $incomingValues = collect($validated['product_variant_values'] ?? []);
+//     $incomingKeys = $incomingVariants->pluck('comboKey')->all();
+
+//     $existingVariants = $product->variants()->get();
+
+//     // Identify variants to delete
+//     $existingKeys = $existingVariants->pluck('combo_key')->all();
+//     $keysToDelete = array_diff($existingKeys, $incomingKeys);
+//     $variantsToDelete = $existingVariants->filter(function ($variant) use ($keysToDelete) {
+//         return in_array($variant->combo_key, $keysToDelete);
+//     });
+
+//     $variantIdsToDelete = $variantsToDelete->pluck('id')->all();
+
+//     // Delete related variant values in chunks
+//     if (!empty($variantIdsToDelete)) {
+//         $chunks = array_chunk($variantIdsToDelete, 1000);
+//         foreach ($chunks as $chunk) {
+//             ProductVariantValue::whereIn('product_variant_id', $chunk)->delete();
+//             ProductVariant::whereIn('id', $chunk)->delete();
+//         }
+//     }
+
+//     // Upsert variants
+//     $variantMap = [];
+//     foreach ($incomingVariants as $variantData) {
+//         $variant = $product->variants()->updateOrCreate(
+//             ['combo_key' => $variantData['comboKey']],
+//             [
+//                 'price' => $variantData['price'],
+//                 'stock' => $variantData['stock']
+//             ]
+//         );
+//         $variantMap[$variantData['comboKey']] = $variant->id;
+//     }
+
+//     // Recreate variant values
+//     foreach ($variantMap as $comboKey => $variantId) {
+//         // Delete existing values in chunks
+//         $valuesIds = $incomingValues->where('comboKey', $comboKey)
+//             ->pluck('variant_option_value_id')
+//             ->all();
+
+//         // Remove previous values
+//         ProductVariantValue::where('product_variant_id', $variantId)->delete();
+
+//         // Insert new values
+//         $valuesForCombo = $incomingValues->where('comboKey', $comboKey);
+//         $insertData = [];
+//         foreach ($valuesForCombo as $valueData) {
+//             $insertData[] = [
+//                 'product_variant_id' => $variantId,
+//                 'variant_option_value_id' => $valueData['variant_option_value_id'],
+//             ];
+//         }
+//         if (!empty($insertData)) {
+//             ProductVariantValue::insert($insertData);
+//         }
+//     }
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     // protected function syncVariants($product, $validated)
     // {
