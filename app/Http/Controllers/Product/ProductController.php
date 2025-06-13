@@ -643,31 +643,6 @@ class ProductController extends Controller
 
 
 
-    // protected function syncProductImages($product, $validated, $request)
-    // {
-    //     if (!empty($validated['deleted_images'])) {
-    //         foreach ($validated['deleted_images'] as $imgPath) {
-    //             $image = $product->images()->where('image_path', $imgPath)->first();
-    //             if ($image) {
-    //                 $image->delete();
-    //                 $fullPath = public_path('product-images/' . $imgPath);
-    //                 if (file_exists($fullPath)) {
-    //                     unlink($fullPath);
-    //                 }
-    //             }
-    //         }
-    //     }
-
-
-
-    //     if ($request->hasFile('new_images')) {
-    //         foreach ($request->file('new_images') as $image) {
-    //             $filename = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-    //             $image->move(public_path('product-images'), $filename);
-    //             $product->images()->create(['image_path' => $filename]);
-    //         }
-    //     }
-    // }
 
 
     protected function syncProductImages($product, $validated, $request)
@@ -690,49 +665,6 @@ class ProductController extends Controller
             }
         }
     }
-
-
-    //         if ($request->has('deleted_images')) {
-    //     $deletedImageIds = $request->input('deleted_images');
-    //     $product->images()->whereIn('id', $deletedImageIds)->delete();
-    // }
-
-    // protected function syncProductImages($product, $validated, $request)
-    // {
-    //     if (!empty($validated['deleted_images'])) {
-    //         foreach ($validated['deleted_images'] as $imgPath) {
-    //             // If the image path includes storage path, extract only the filename
-    //             $filename = basename($imgPath); // Only get the file name
-
-    //             $image = $product->images()->where('image_path', $imgPath)->first();
-
-    //             if ($image) {
-    //                 $image->delete();
-
-    //                 $fullPath = public_path('product-images/' . $filename);
-
-    //                 if (file_exists($fullPath)) {
-    //                     unlink($fullPath);
-    //                 }
-    //             }
-
-    //             logger('Trying to delete:', ['path' => $imgPath, 'full' => $fullPath]);
-
-    //         }
-    //     }
-
-    //     // Save new images
-    //     if ($request->hasFile('new_images')) {
-    //         foreach ($request->file('new_images') as $imageFile) {
-    //             $filename = uniqid() . '.' . $imageFile->getClientOriginalExtension();
-    //             $imageFile->move(public_path('product-images'), $filename);
-
-    //             $product->images()->create(['image_path' => 'product-images/' . $filename]);
-    //         }
-    //     }
-    // }
-
-
 
 
 
@@ -781,6 +713,7 @@ class ProductController extends Controller
             if (!in_array($variant->combo_key, $incomingKeys)) {
                 $variant->variantValues()->delete();
                 $variant->delete();
+                
             }
         }
 
