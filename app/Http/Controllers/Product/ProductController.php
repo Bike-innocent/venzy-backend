@@ -10,6 +10,7 @@ use App\Models\ProductImage;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Models\ProductVariant;
 use App\Models\ProductVariantValue;
 use App\Models\VariantOption;
 use Illuminate\Support\Str;
@@ -703,63 +704,186 @@ class ProductController extends Controller
 
 
     protected function syncVariants($product, $validated)
-{
-    $incomingVariants = collect($validated['product_variants'] ?? []);
-    $incomingValues = collect($validated['product_variant_values'] ?? []);
-    $incomingKeys = $incomingVariants->pluck('comboKey')->all();
+    {
+        $incomingVariants = collect($validated['product_variants'] ?? []);
+        $incomingValues = collect($validated['product_variant_values'] ?? []);
+        $incomingKeys = $incomingVariants->pluck('comboKey')->all();
 
-    $existingVariants = $product->variants()->get();
+        $existingVariants = $product->variants()->get();
 
-    // Identify variants to delete
-    $existingKeys = $existingVariants->pluck('combo_key')->all();
+        // Identify variants to delete
+        $existingKeys = $existingVariants->pluck('combo_key')->all();
 
-    // Variants to delete: those existing but not incoming
-    $keysToDelete = array_diff($existingKeys, $incomingKeys);
-    $variantsToDelete = $existingVariants->filter(function ($variant) use ($keysToDelete) {
-        return in_array($variant->combo_key, $keysToDelete);
-    });
+        // Variants to delete: those existing but not incoming
+        $keysToDelete = array_diff($existingKeys, $incomingKeys);
+        $variantsToDelete = $existingVariants->filter(function ($variant) use ($keysToDelete) {
+            return in_array($variant->combo_key, $keysToDelete);
+        });
 
-    // Collect IDs for bulk delete
-    $variantIdsToDelete = $variantsToDelete->pluck('id')->all();
+        // Collect IDs for bulk delete
+        $variantIdsToDelete = $variantsToDelete->pluck('id')->all();
 
-    // Bulk delete variant values related to these variants
-    if (!empty($variantIdsToDelete)) {
-        ProductVariantValue::whereIn('product_variant_id', $variantIdsToDelete)->delete();
-        ProductVariant::whereIn('id', $variantIdsToDelete)->delete();
+        // Bulk delete variant values related to these variants
+        if (!empty($variantIdsToDelete)) {
+            ProductVariantValue::whereIn('product_variant_id', $variantIdsToDelete)->delete();
+            ProductVariant::whereIn('id', $variantIdsToDelete)->delete();
+        }
+
+        // Upsert incoming variants
+        $variantMap = [];
+        foreach ($incomingVariants as $variantData) {
+            $variant = $product->variants()->updateOrCreate(
+                ['combo_key' => $variantData['comboKey']],
+                [
+                    'price' => $variantData['price'],
+                    'stock' => $variantData['stock']
+                ]
+            );
+            $variantMap[$variantData['comboKey']] = $variant->id;
+        }
+
+        // Recreate variant values for each variant
+        foreach ($variantMap as $comboKey => $variantId) {
+            // Delete existing values for this variant
+            ProductVariantValue::where('product_variant_id', $variantId)->delete();
+
+            // Insert new values
+            $valuesForCombo = $incomingValues->where('comboKey', $comboKey);
+            $insertData = [];
+            foreach ($valuesForCombo as $valueData) {
+                $insertData[] = [
+                    'product_variant_id' => $variantId,
+                    'variant_option_value_id' => $valueData['variant_option_value_id'],
+                ];
+            }
+            if (!empty($insertData)) {
+                ProductVariantValue::insert($insertData);
+            }
+        }
     }
 
-    // Upsert incoming variants
-    $variantMap = [];
-    foreach ($incomingVariants as $variantData) {
-        $variant = $product->variants()->updateOrCreate(
-            ['combo_key' => $variantData['comboKey']],
-            [
-                'price' => $variantData['price'],
-                'stock' => $variantData['stock']
-            ]
-        );
-        $variantMap[$variantData['comboKey']] = $variant->id;
+
+
+
+
+
+
+
+
+
+
+
+    public function show($slug)
+    {
+        $product = Product::with([
+            'category',
+            'brand',
+            'images',
+            'variants.variantValues.variantOptionValue.variantOption',
+            // 'productVariantOptions.variantOption',
+        ])->where('slug', $slug)->firstOrFail();
+
+
+        // Format image paths
+        $product->images = $product->images->map(function ($image) {
+            $image->image_path = url('product-images/' . $image->image_path);
+            return $image;
+        });
+
+
+
+        $product->variants = $product->variants->map(function ($variant) {
+            $attributes = [];
+
+            foreach ($variant->variantValues as $vv) {
+                $optionValue = $vv->variantOptionValue;
+                $option = $optionValue?->option;
+
+                if ($option && $optionValue) {
+                    $attributes[$option->name] = $optionValue->value;
+                }
+            }
+
+            $variant->attributes = $attributes;
+            unset($variant->variantValues); // Optional cleanup
+            return $variant;
+        });
+
+
+
+
+        // Get variant options with only values used by this product
+        $variantOptionIds = $product->productVariantOptions()->pluck('variant_option_id');
+
+        $usedValueIds = DB::table('product_variant_values')
+            ->join('product_variants', 'product_variant_values.product_variant_id', '=', 'product_variants.id')
+            ->where('product_variants.product_id', $product->id)
+            ->pluck('variant_option_value_id')
+            ->unique();
+
+        // $variantOptions = \App\Models\VariantOption::with(['values' => function ($query) use ($usedValueIds) {
+        //     $query->whereIn('id', $usedValueIds);
+        // }])->whereIn('id', $variantOptionIds)->get();
+
+        // $product->variant_options = $variantOptions;
+
+        $variantOptions = \App\Models\VariantOption::with(['values' => function ($query) use ($usedValueIds) {
+            $query->whereIn('id', $usedValueIds);
+        }])->whereIn('id', $variantOptionIds)->get();
+
+        $product->setRelation('variant_options', $variantOptions); // or $product->variant_options = $variantOptions
+
+
+        return response()->json($product);
     }
 
-    // Recreate variant values for each variant
-    foreach ($variantMap as $comboKey => $variantId) {
-        // Delete existing values for this variant
-        ProductVariantValue::where('product_variant_id', $variantId)->delete();
 
-        // Insert new values
-        $valuesForCombo = $incomingValues->where('comboKey', $comboKey);
-        $insertData = [];
-        foreach ($valuesForCombo as $valueData) {
-            $insertData[] = [
-                'product_variant_id' => $variantId,
-                'variant_option_value_id' => $valueData['variant_option_value_id'],
-            ];
-        }
-        if (!empty($insertData)) {
-            ProductVariantValue::insert($insertData);
-        }
+
+
+    // Delete a product
+    public function destroy(Product $product)
+    {
+        $product->delete();
+        return response()->json(['message' => 'Product deleted successfully']);
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1067,99 +1191,3 @@ class ProductController extends Controller
     //         }
     //     }
     // }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-
-
-    public function show($slug)
-    {
-        $product = Product::with([
-            'category',
-            'brand',
-            'images',
-            'variants.variantValues.variantOptionValue.variantOption',
-            // 'productVariantOptions.variantOption',
-        ])->where('slug', $slug)->firstOrFail();
-
-
-        // Format image paths
-        $product->images = $product->images->map(function ($image) {
-            $image->image_path = url('product-images/' . $image->image_path);
-            return $image;
-        });
-
-
-
-        $product->variants = $product->variants->map(function ($variant) {
-            $attributes = [];
-
-            foreach ($variant->variantValues as $vv) {
-                $optionValue = $vv->variantOptionValue;
-                $option = $optionValue?->option;
-
-                if ($option && $optionValue) {
-                    $attributes[$option->name] = $optionValue->value;
-                }
-            }
-
-            $variant->attributes = $attributes;
-            unset($variant->variantValues); // Optional cleanup
-            return $variant;
-        });
-
-
-
-
-        // Get variant options with only values used by this product
-        $variantOptionIds = $product->productVariantOptions()->pluck('variant_option_id');
-
-        $usedValueIds = DB::table('product_variant_values')
-            ->join('product_variants', 'product_variant_values.product_variant_id', '=', 'product_variants.id')
-            ->where('product_variants.product_id', $product->id)
-            ->pluck('variant_option_value_id')
-            ->unique();
-
-        // $variantOptions = \App\Models\VariantOption::with(['values' => function ($query) use ($usedValueIds) {
-        //     $query->whereIn('id', $usedValueIds);
-        // }])->whereIn('id', $variantOptionIds)->get();
-
-        // $product->variant_options = $variantOptions;
-
-        $variantOptions = \App\Models\VariantOption::with(['values' => function ($query) use ($usedValueIds) {
-            $query->whereIn('id', $usedValueIds);
-        }])->whereIn('id', $variantOptionIds)->get();
-
-        $product->setRelation('variant_options', $variantOptions); // or $product->variant_options = $variantOptions
-
-
-        return response()->json($product);
-    }
-
-
-
-
-    // Delete a product
-    public function destroy(Product $product)
-    {
-        $product->delete();
-        return response()->json(['message' => 'Product deleted successfully']);
-    }
-}
