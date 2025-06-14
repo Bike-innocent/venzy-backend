@@ -704,28 +704,18 @@ class ProductController extends Controller
 
 
 
+
+
 protected function syncVariants($product, $validated)
 {
     $incomingVariants = collect($validated['product_variants'] ?? []);
     $incomingValues = collect($validated['product_variant_values'] ?? []);
-
-    // Sync product variants
-    $this->syncProductVariants($product, $incomingVariants);
-
-    // Sync product variant values
-    $this->syncProductVariantValues($product, $incomingValues);
-}
-
-
-
-protected function syncProductVariants($product, $incomingVariants)
-{
-    $existingVariants = $product->variants()->get();
-
-    $existingKeys = $existingVariants->pluck('combo_key')->all();
     $incomingKeys = $incomingVariants->pluck('comboKey')->all();
 
-    // Variants to delete (not in incoming)
+    $existingVariants = $product->variants()->get();
+
+    // Identify variants to delete
+    $existingKeys = $existingVariants->pluck('combo_key')->all();
     $keysToDelete = array_diff($existingKeys, $incomingKeys);
     $variantsToDelete = $existingVariants->filter(function ($variant) use ($keysToDelete) {
         return in_array($variant->combo_key, $keysToDelete);
@@ -733,16 +723,20 @@ protected function syncProductVariants($product, $incomingVariants)
 
     $variantIdsToDelete = $variantsToDelete->pluck('id')->all();
 
-    // Chunked delete for large datasets
     if (!empty($variantIdsToDelete)) {
-        $chunks = array_chunk($variantIdsToDelete, 1000);
-        foreach ($chunks as $chunk) {
-            ProductVariant::whereIn('id', $chunk)->delete();
-            ProductVariantValue::whereIn('product_variant_id', $chunk)->delete();
-        }
+        // Sanitize IDs
+        $ids = implode(',', array_map('intval', $variantIdsToDelete));
+        // Disable foreign key checks
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        // Delete related variant values
+        DB::statement("DELETE FROM product_variant_values WHERE product_variant_id IN ($ids);");
+        // Delete variants
+        DB::statement("DELETE FROM product_variants WHERE id IN ($ids);");
+        // Re-enable foreign key checks
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
     }
 
-    // Upsert (update or create) incoming variants
+    // Upsert variants
     $variantMap = [];
     foreach ($incomingVariants as $variantData) {
         $variant = $product->variants()->updateOrCreate(
@@ -754,30 +748,16 @@ protected function syncProductVariants($product, $incomingVariants)
         );
         $variantMap[$variantData['comboKey']] = $variant->id;
     }
-}
 
-
-
-protected function syncProductVariantValues($product, $incomingValues)
-{
-    // Group incoming values by comboKey
-    $groupedValues = $incomingValues->groupBy('comboKey');
-
-    foreach ($groupedValues as $comboKey => $values) {
-        // Find the related variant ID
-        $variant = $product->variants()->where('combo_key', $comboKey)->first();
-        if (!$variant) {
-            continue; // or handle missing variant
-        }
-
-        $variantId = $variant->id;
-
-        // Delete previous values for this variant
+    // Recreate variant values
+    foreach ($variantMap as $comboKey => $variantId) {
+        // Remove previous values
         ProductVariantValue::where('product_variant_id', $variantId)->delete();
 
-        // Prepare bulk insert
+        // Prepare new values
+        $valuesForCombo = $incomingValues->where('comboKey', $comboKey);
         $insertData = [];
-        foreach ($values as $valueData) {
+        foreach ($valuesForCombo as $valueData) {
             $insertData[] = [
                 'product_variant_id' => $variantId,
                 'variant_option_value_id' => $valueData['variant_option_value_id'],
@@ -789,95 +769,6 @@ protected function syncProductVariantValues($product, $incomingValues)
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
