@@ -259,7 +259,10 @@ class ProductController extends Controller
 
             DB::commit();
 
-            return response()->json(['message' => 'Product created successfully'], 201);
+            return response()->json([
+                'message' => 'Product created successfully',
+                'product' => $product, // include the product object
+            ], 201);
         } catch (\Exception $e) {
             //  \log::error('error on product: ' . $e->getMessage());
             DB::rollBack();
@@ -472,69 +475,69 @@ class ProductController extends Controller
 
 
 
-protected function syncVariants($product, $validated)
-{
-    $incomingVariants = collect($validated['product_variants'] ?? []);
-    $incomingValues = collect($validated['product_variant_values'] ?? []);
-    $incomingKeys = $incomingVariants->pluck('comboKey')->all();
+    protected function syncVariants($product, $validated)
+    {
+        $incomingVariants = collect($validated['product_variants'] ?? []);
+        $incomingValues = collect($validated['product_variant_values'] ?? []);
+        $incomingKeys = $incomingVariants->pluck('comboKey')->all();
 
-    $existingVariants = $product->variants()->get();
+        $existingVariants = $product->variants()->get();
 
-    // Identify variants to delete
-    $existingKeys = $existingVariants->pluck('combo_key')->all();
-    $keysToDelete = array_diff($existingKeys, $incomingKeys);
-    $variantsToDelete = $existingVariants->filter(function ($variant) use ($keysToDelete) {
-        return in_array($variant->combo_key, $keysToDelete);
-    });
+        // Identify variants to delete
+        $existingKeys = $existingVariants->pluck('combo_key')->all();
+        $keysToDelete = array_diff($existingKeys, $incomingKeys);
+        $variantsToDelete = $existingVariants->filter(function ($variant) use ($keysToDelete) {
+            return in_array($variant->combo_key, $keysToDelete);
+        });
 
-    $variantIdsToDelete = $variantsToDelete->pluck('id')->all();
+        $variantIdsToDelete = $variantsToDelete->pluck('id')->all();
 
-    if (!empty($variantIdsToDelete)) {
-        // Sanitize IDs
-        $ids = implode(',', array_map('intval', $variantIdsToDelete));
-        // Disable foreign key checks
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-        // Delete related variant values
-        DB::statement("DELETE FROM product_variant_values WHERE product_variant_id IN ($ids);");
-        // Delete variants
-        DB::statement("DELETE FROM product_variants WHERE id IN ($ids);");
-        // Re-enable foreign key checks
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-    }
-
-    // Upsert variants
-    $variantMap = [];
-    foreach ($incomingVariants as $variantData) {
-        $variant = $product->variants()->updateOrCreate(
-            ['combo_key' => $variantData['comboKey']],
-            [
-                'price' => $variantData['price'],
-                'stock' => $variantData['stock']
-            ]
-        );
-        $variantMap[$variantData['comboKey']] = $variant->id;
-    }
-
-    // Recreate variant values
-    foreach ($variantMap as $comboKey => $variantId) {
-        // Remove previous values
-        ProductVariantValue::where('product_variant_id', $variantId)->delete();
-
-        // Prepare new values
-        $valuesForCombo = $incomingValues->where('comboKey', $comboKey);
-        $insertData = [];
-        foreach ($valuesForCombo as $valueData) {
-            $insertData[] = [
-                'product_variant_id' => $variantId,
-                'variant_option_value_id' => $valueData['variant_option_value_id'],
-            ];
+        if (!empty($variantIdsToDelete)) {
+            // Sanitize IDs
+            $ids = implode(',', array_map('intval', $variantIdsToDelete));
+            // Disable foreign key checks
+            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+            // Delete related variant values
+            DB::statement("DELETE FROM product_variant_values WHERE product_variant_id IN ($ids);");
+            // Delete variants
+            DB::statement("DELETE FROM product_variants WHERE id IN ($ids);");
+            // Re-enable foreign key checks
+            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
         }
 
-        if (!empty($insertData)) {
-            ProductVariantValue::insert($insertData);
+        // Upsert variants
+        $variantMap = [];
+        foreach ($incomingVariants as $variantData) {
+            $variant = $product->variants()->updateOrCreate(
+                ['combo_key' => $variantData['comboKey']],
+                [
+                    'price' => $variantData['price'],
+                    'stock' => $variantData['stock']
+                ]
+            );
+            $variantMap[$variantData['comboKey']] = $variant->id;
+        }
+
+        // Recreate variant values
+        foreach ($variantMap as $comboKey => $variantId) {
+            // Remove previous values
+            ProductVariantValue::where('product_variant_id', $variantId)->delete();
+
+            // Prepare new values
+            $valuesForCombo = $incomingValues->where('comboKey', $comboKey);
+            $insertData = [];
+            foreach ($valuesForCombo as $valueData) {
+                $insertData[] = [
+                    'product_variant_id' => $variantId,
+                    'variant_option_value_id' => $valueData['variant_option_value_id'],
+                ];
+            }
+
+            if (!empty($insertData)) {
+                ProductVariantValue::insert($insertData);
+            }
         }
     }
-}
 
 
 
@@ -624,10 +627,18 @@ protected function syncVariants($product, $validated)
 
 
     // Delete a product
-    public function destroy(Product $product)
+    public function destroy($slug)
     {
+        $product = Product::where('slug', $slug)->firstOrFail();
+
+        // If you want to delete related variants/images etc. do it here
+        $product->variants()->delete();
+        $product->productVariantOptions()->delete();
+        $product->images()->delete(); // If applicable
+
         $product->delete();
-        return response()->json(['message' => 'Product deleted successfully']);
+
+        return response()->json(['message' => 'Product deleted successfully.']);
     }
 }
 

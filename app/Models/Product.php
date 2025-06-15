@@ -72,10 +72,10 @@ class Product extends Model
 
 
     public function variantOptions()
-{
-    return $this->belongsToMany(VariantOption::class, 'product_variant_options')
-                ->with('values'); // 👈 Eager load the values
-}
+    {
+        return $this->belongsToMany(VariantOption::class, 'product_variant_options')
+            ->with('values'); // 👈 Eager load the values
+    }
 
 
     public function images()

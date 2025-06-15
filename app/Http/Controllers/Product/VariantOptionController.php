@@ -34,7 +34,7 @@ class VariantOptionController extends Controller
     public function update(Request $request, VariantOption $variantOption)
     {
         $request->validate([
-            'name' => 'required|string|unique:variant_options,name',
+            'name' => 'required|string|unique:variant_options,name,' . $variantOption->id,
         ]);
 
         $variantOption->update([
