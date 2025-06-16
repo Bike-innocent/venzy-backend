@@ -627,19 +627,52 @@ class ProductController extends Controller
 
 
     // Delete a product
-    public function destroy($slug)
-    {
-        $product = Product::where('slug', $slug)->firstOrFail();
+    // public function destroy($slug)
+    // {
+    //     $product = Product::where('slug', $slug)->firstOrFail();
 
-        // If you want to delete related variants/images etc. do it here
-        $product->variants()->delete();
-        $product->productVariantOptions()->delete();
-        $product->images()->delete(); // If applicable
+    //     // If you want to delete related variants/images etc. do it here
+    //     $product->variants()->delete();
+    //     $product->productVariantOptions()->delete();
+    //     $product->images()->delete(); // If applicable
 
-        $product->delete();
+    //     $product->delete();
+
+    //     return response()->json(['message' => 'Product deleted successfully.']);
+    // }
+
+
+
+public function destroy($slug)
+{
+    // Find the product
+    $product = Product::where('slug', $slug)->firstOrFail();
+
+    // Wrap in a transaction to ensure all deletions happen atomically
+    DB::beginTransaction();
+
+    try {
+        // Delete related variants
+        DB::statement('DELETE FROM product_variants WHERE product_id = ?', [$product->id]);
+
+        // Delete variant options
+        DB::statement('DELETE FROM product_variant_options WHERE product_id = ?', [$product->id]);
+
+        // Delete images
+        DB::statement('DELETE FROM product_images WHERE product_id = ?', [$product->id]);
+
+        // Delete the product itself
+        DB::statement('DELETE FROM products WHERE id = ?', [$product->id]);
+
+        DB::commit();
 
         return response()->json(['message' => 'Product deleted successfully.']);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        // Log error or handle as needed
+        return response()->json(['error' => 'Failed to delete product.'], 500);
     }
+}
 }
 
 
