@@ -15,7 +15,7 @@ use App\Http\Controllers\Product\ColourController;
 use App\Http\Controllers\Product\SizeController;
 use App\Http\Controllers\Product\SupplierController;
 use App\Http\Controllers\Order\CustomerOrderController;
-use App\Http\Controllers\Order\CartController;
+use App\Http\Controllers\Product\CartController;
 use App\Http\Controllers\Product\CategoryController;
 use App\Http\Controllers\Product\VariantOptionController;
 use App\Http\Controllers\Product\VariantValueController;
@@ -123,11 +123,17 @@ Route::prefix('orders')->group(function () {
 
 
 
+// Route::middleware('auth:sanctum')->group(function () {
+//     Route::get('/cart', [CartController::class, 'index']);
+//     Route::post('/cart', [CartController::class, 'store']);
+//     Route::put('/cart/{id}', [CartController::class, 'update']);
+//     Route::delete('/cart/{id}', [CartController::class, 'destroy']);
+// });
+
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/cart', [CartController::class, 'index']);
-    Route::post('/cart', [CartController::class, 'store']);
-    Route::put('/cart/{id}', [CartController::class, 'update']);
-    Route::delete('/cart/{id}', [CartController::class, 'destroy']);
+    // routes/api.php
+    Route::post('/cart/add', [CartController::class, 'addToCart']);
+    Route::get('/cart', [CartController::class, 'getCart']);
 });
 
 // Route::middleware('auth:admin')->group(function () {
