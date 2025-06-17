@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-    
+
         Schema::create('cart_items', function (Blueprint $table) {
             $table->id();
             // Reference to the user (nullable for guest carts)
@@ -19,7 +19,8 @@ return new class extends Migration
             // Optionally track guest sessions
             $table->string('session_id')->nullable()->index();
             $table->foreignId('product_id')->constrained()->onDelete('cascade');
-            $table->foreignId('product_variant_id')->constrained()->onDelete('cascade');
+            $table->foreignId('product_variant_id')->nullable()->constrained()->onDelete('cascade');
+
             $table->unsignedInteger('quantity')->default(1);
             // Price at time of adding to cart (can be different from current product price)
             $table->decimal('price', 10, 2);
