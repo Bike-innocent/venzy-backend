@@ -10,37 +10,6 @@ use Illuminate\Http\Request;
 
 class CartController extends Controller
 {
-    // app/Http/Controllers/CartController.php
-
-    // public function addToCart(Request $request)
-    // {
-    //     $validated = $request->validate([
-    //         'product_id' => 'required|exists:products,id',
-    //         'product_variant_id' => 'nullable|exists:product_variants,id',
-    //         'quantity' => 'required|integer|min:1',
-    //         'price' => 'required|numeric',
-    //     ]);
-
-    //     $user = $request->user();
-
-    //     $existing = CartItem::where('user_id', $user->id)
-    //         ->where('product_variant_id', $validated['product_variant_id'])
-    //         ->where('is_checked_out', false)
-    //         ->first();
-
-    //     if ($existing) {
-    //         $existing->quantity += $validated['quantity'];
-    //         $existing->save();
-    //     } else {
-    //         $user->cartItems()->create([
-    //             ...$validated,
-    //         ]);
-    //     }
-
-    //     return response()->json(['message' => 'Added to cart']);
-    // }
-
-
 
     public function addToCart(Request $request)
     {
@@ -98,68 +67,6 @@ class CartController extends Controller
 
 
 
-
-
-
-    public function removeFromCart(Request $request, $id)
-    {
-        $user = $request->user();
-
-        $cartItem = CartItem::where('user_id', $user->id)
-            ->where('id', $id)
-            ->where('is_checked_out', false)
-            ->first();
-
-        if (!$cartItem) {
-            return response()->json(['message' => 'Cart item not found'], 404);
-        }
-
-        $cartItem->delete();
-
-        return response()->json(['message' => 'Removed from cart']);
-    }
-
-
-
-
-
-
-
-
-
-
-    public function updateCartItem(Request $request, $id)
-    {
-        $validated = $request->validate([
-            'quantity' => 'required|integer|min:1',
-        ]);
-
-        $user = $request->user();
-
-        $cartItem = CartItem::where('user_id', $user->id)
-            ->where('id', $id)
-            ->where('is_checked_out', false)
-            ->first();
-
-        if (!$cartItem) {
-            return response()->json(['message' => 'Cart item not found'], 404);
-        }
-
-        $cartItem->quantity = $validated['quantity'];
-        $cartItem->save();
-
-        return response()->json(['message' => 'Cart item updated']);
-    }
-
-
-
-
-
-
-
-
-
-
     public function getCart(Request $request)
     {
         $user = $request->user();
@@ -182,5 +89,113 @@ class CartController extends Controller
     }
 
 
-    
+
+
+
+
+
+
+
+    public function updateCartItem(Request $request, CartItem $cartItem)
+    {
+        $validated = $request->validate([
+            'quantity' => 'required|integer|min:1',
+        ]);
+
+        if ($cartItem->user_id !== $request->user()->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        // Check stock
+        if ($cartItem->product_variant_id) {
+            $variant = ProductVariant::find($cartItem->product_variant_id);
+            if ($validated['quantity'] > $variant->stock) {
+                return response()->json(['error' => 'Not enough stock'], 400);
+            }
+        } else {
+            if ($validated['quantity'] > $cartItem->product->stock) {
+                return response()->json(['error' => 'Not enough stock'], 400);
+            }
+        }
+
+        $cartItem->quantity = $validated['quantity'];
+        $cartItem->save();
+
+        // Reload updated cart
+        $updatedCart = $request->user()->cartItems()
+            ->where('is_checked_out', false)
+            ->with(['product', 'variant', 'product.images'])
+            ->get();
+
+        // Update image paths
+        $updatedCart->each(function ($item) {
+            $item->product->images = $item->product->images->map(function ($image) {
+                if (!preg_match('/^http(s)?:\/\//', $image->image_path)) {
+                    $image->image_path = url('product-images/' . $image->image_path);
+                }
+                return $image;
+            });
+        });
+
+        return response()->json($updatedCart);
+    }
+
+
+
+
+
+
+
+
+
+
+    public function removeCartItem(Request $request, CartItem $cartItem)
+    {
+        // Ensure the cart item belongs to the authenticated user
+        if ($cartItem->user_id !== $request->user()->id) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $cartItem->delete();
+
+        // Reload updated cart
+        $updatedCart = $request->user()->cartItems()
+            ->where('is_checked_out', false)
+            ->with(['product', 'variant', 'product.images'])
+            ->get();
+
+        // Update image paths
+        $updatedCart->each(function ($item) {
+            $item->product->images = $item->product->images->map(function ($image) {
+                if (!preg_match('/^http(s)?:\/\//', $image->image_path)) {
+                    $image->image_path = url('product-images/' . $image->image_path);
+                }
+                return $image;
+            });
+        });
+
+        return response()->json($updatedCart);
+    }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -134,6 +134,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // routes/api.php
     Route::post('/cart/add', [CartController::class, 'addToCart']);
     Route::get('/cart', [CartController::class, 'getCart']);
+    Route::put('/cart/{cartItem}', [CartController::class, 'updateCartItem']);
+    Route::delete('/cart/{cartItem}', [CartController::class, 'removeCartItem']);
 });
 
 // Route::middleware('auth:admin')->group(function () {
