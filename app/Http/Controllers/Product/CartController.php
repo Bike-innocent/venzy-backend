@@ -11,6 +11,64 @@ use Illuminate\Http\Request;
 class CartController extends Controller
 {
 
+    // public function addToCart(Request $request)
+    // {
+    //     $validated = $request->validate([
+    //         'product_id' => 'required|exists:products,id',
+    //         'product_variant_id' => 'nullable|exists:product_variants,id',
+    //         'quantity' => 'required|integer|min:1',
+    //         'price' => 'required|numeric',
+    //     ]);
+
+    //     $user = $request->user();
+    //     $product = Product::findOrFail($validated['product_id']);
+
+    //     if ($validated['product_variant_id']) {
+    //         $variant = ProductVariant::findOrFail($validated['product_variant_id']);
+
+    //         if ($variant->stock < $validated['quantity']) {
+    //             return response()->json(['error' => 'Not enough stock for selected variant'], 400);
+    //         }
+
+    //         $existing = CartItem::where('user_id', $user->id)
+    //             ->where('product_id', $product->id)
+    //             ->where('product_variant_id', $variant->id)
+    //             ->where('is_checked_out', false)
+    //             ->first();
+    //     } else {
+    //         if ($product->stock < $validated['quantity']) {
+    //             return response()->json(['error' => 'Not enough stock available'], 400);
+    //         }
+
+    //         $existing = CartItem::where('user_id', $user->id)
+    //             ->where('product_id', $product->id)
+    //             ->whereNull('product_variant_id')
+    //             ->where('is_checked_out', false)
+    //             ->first();
+    //     }
+
+    //     if ($existing) {
+    //         $existing->quantity += $validated['quantity'];
+    //         $existing->save();
+    //     } else {
+    //         $user->cartItems()->create([
+    //             'product_id' => $validated['product_id'],
+    //             'product_variant_id' => $validated['product_variant_id'] ?? null,
+    //             'quantity' => $validated['quantity'],
+    //             'price' => $validated['price'],
+    //         ]);
+    //     }
+
+    //     return response()->json(['message' => 'Added to cart']);
+    // }
+
+
+
+
+
+
+
+
     public function addToCart(Request $request)
     {
         $validated = $request->validate([
@@ -59,7 +117,13 @@ class CartController extends Controller
             ]);
         }
 
-        return response()->json(['message' => 'Added to cart']);
+        // Calculate total cart count
+        $totalCartCount = $user->cartItems()->where('is_checked_out', false)->sum('quantity');
+
+        return response()->json([
+            'message' => 'Added to cart',
+            'totalCartCount' => $totalCartCount
+        ]);
     }
 
 
@@ -86,6 +150,35 @@ class CartController extends Controller
             });
         });
         return response()->json($cartItems);
+    }
+
+
+
+
+
+    public function getCartItemQuantity(Request $request)
+    {
+        $request->validate([
+            'product_id' => 'required|exists:products,id',
+            'product_variant_id' => 'nullable|exists:product_variants,id',
+        ]);
+
+        $user = $request->user();
+
+        $cartItem = CartItem::where('user_id', $user->id)
+            ->where('product_id', $request->product_id)
+            ->when(
+                $request->product_variant_id,
+                fn($q) =>
+                $q->where('product_variant_id', $request->product_variant_id),
+                fn($q) => $q->whereNull('product_variant_id')
+            )
+            ->where('is_checked_out', false)
+            ->first();
+
+        return response()->json([
+            'quantity' => $cartItem ? $cartItem->quantity : 0
+        ]);
     }
 
 
@@ -177,25 +270,3 @@ class CartController extends Controller
         return response()->json($updatedCart);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

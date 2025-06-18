@@ -136,6 +136,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/cart', [CartController::class, 'getCart']);
     Route::put('/cart/{cartItem}', [CartController::class, 'updateCartItem']);
     Route::delete('/cart/{cartItem}', [CartController::class, 'removeCartItem']);
+    Route::get('/cart/item-quantity', [CartController::class, 'getCartItemQuantity']);
+
 });
 
 // Route::middleware('auth:admin')->group(function () {
