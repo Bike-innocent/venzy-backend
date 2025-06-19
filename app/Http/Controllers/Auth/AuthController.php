@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\CartItem;
 use Illuminate\Support\Facades\Hash;
 use App\Mail\WelcomeEmail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 // use Laravel\Sanctum\HasApiTokens;
 // use Laravel\Sanctum\PersonalAccessToken;
@@ -22,28 +24,27 @@ class AuthController extends Controller
             'password' => 'required|string|min:8|confirmed',
         ]);
 
-        // Create the new user
         $user = User::create([
             'name' => $validatedData['name'],
             'email' => $validatedData['email'],
             'password' => Hash::make($validatedData['password']),
         ]);
 
-        // Automatically log the user in after registration
         Auth::login($user);
-
-        // Create a new token for the user
         $token = $user->createToken('auth_token')->plainTextToken;
 
         try {
             Mail::to($user->email)->send(new WelcomeEmail($user));
         } catch (\Exception $e) {
-            \log::error('Mail send failed: ' . $e->getMessage());
+            Log::error('Mail send failed: ' . $e->getMessage());
         }
 
+        // Merge guest cart
+        $this->mergeGuestCart($request);
 
         return response()->json(['user' => $user, 'access_token' => $token, 'token_type' => 'Bearer'], 201);
     }
+
 
     public function login(Request $request)
     {
@@ -52,7 +53,7 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        if (! Auth::attempt($credentials)) {
+        if (!Auth::attempt($credentials)) {
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
@@ -60,8 +61,45 @@ class AuthController extends Controller
         $user->load('roles', 'permissions');
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        // Merge guest cart
+        $this->mergeGuestCart($request);
+
         return response()->json(['user' => $user, 'access_token' => $token, 'token_type' => 'Bearer'], 201);
     }
+
+
+
+    protected function mergeGuestCart(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) return;
+
+        $guestId = $request->header('X-Guest-Id');
+        if (!$guestId) return;
+
+        $guestItems = CartItem::where('guest_id', $guestId)
+            ->where('is_checked_out', false)
+            ->get();
+
+        foreach ($guestItems as $item) {
+            $existing = CartItem::where('user_id', $user->id)
+                ->where('product_id', $item->product_id)
+                ->where('product_variant_id', $item->product_variant_id)
+                ->where('is_checked_out', false)
+                ->first();
+
+            if ($existing) {
+                $existing->quantity += $item->quantity;
+                $existing->save();
+                $item->delete();
+            } else {
+                $item->user_id = $user->id;
+                $item->guest_id = null;
+                $item->save();
+            }
+        }
+    }
+
 
     public function logout(Request $request)
     {

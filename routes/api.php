@@ -22,6 +22,7 @@ use App\Http\Controllers\Product\VariantValueController;
 // use App\Http\Controllers\Address\AddressController;
 use App\Http\Controllers\Profile\EmailUpdateController;
 use App\Http\Controllers\User\AddressController;
+use Illuminate\Session\Middleware\StartSession;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -123,22 +124,26 @@ Route::prefix('orders')->group(function () {
 
 
 
-// Route::middleware('auth:sanctum')->group(function () {
-//     Route::get('/cart', [CartController::class, 'index']);
-//     Route::post('/cart', [CartController::class, 'store']);
-//     Route::put('/cart/{id}', [CartController::class, 'update']);
-//     Route::delete('/cart/{id}', [CartController::class, 'destroy']);
+
+
+// Route::middleware(['auth:sanctum'])->group(function () {
+//     Route::post('/cart/add', [CartController::class, 'addToCart']);
+//     Route::get('/cart', [CartController::class, 'getCart']);
+//     Route::put('/cart/{cartItem}', [CartController::class, 'updateCartItem']);
+//     Route::delete('/cart/{cartItem}', [CartController::class, 'removeCartItem']);
+//     Route::get('/cart/item-quantity', [CartController::class, 'getCartItemQuantity']);
 // });
 
-Route::middleware('auth:sanctum')->group(function () {
-    // routes/api.php
-    Route::post('/cart/add', [CartController::class, 'addToCart']);
-    Route::get('/cart', [CartController::class, 'getCart']);
-    Route::put('/cart/{cartItem}', [CartController::class, 'updateCartItem']);
-    Route::delete('/cart/{cartItem}', [CartController::class, 'removeCartItem']);
-    Route::get('/cart/item-quantity', [CartController::class, 'getCartItemQuantity']);
 
-});
+
+// Don't protect cart routes with `auth:sanctum` so guests can access them
+Route::post('/cart/add', [CartController::class, 'addToCart']);
+Route::get('/cart', [CartController::class, 'getCart']);
+Route::put('/cart/{cartItem}', [CartController::class, 'updateCartItem']);
+Route::delete('/cart/{cartItem}', [CartController::class, 'removeCartItem']);
+Route::get('/cart/item-quantity', [CartController::class, 'getCartItemQuantity']);
+
+
 
 // Route::middleware('auth:admin')->group(function () {
 

@@ -16,8 +16,8 @@ return new class extends Migration
             $table->id();
             // Reference to the user (nullable for guest carts)
             $table->foreignId('user_id')->nullable()->constrained()->onDelete('cascade');
-            // Optionally track guest sessions
-            $table->string('session_id')->nullable()->index();
+            // Guest identifier
+            $table->string('guest_id')->nullable()->index();
             $table->foreignId('product_id')->constrained()->onDelete('cascade');
             $table->foreignId('product_variant_id')->nullable()->constrained()->onDelete('cascade');
 
