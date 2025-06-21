@@ -251,7 +251,7 @@ class CartController extends Controller
 
 
 
-    
+
 
 
 
@@ -284,7 +284,17 @@ class CartController extends Controller
             });
         });
 
-        return response()->json($cartItems);
+        $totalCartCount = CartItem::where('is_checked_out', false)
+            ->when($user, fn($q) => $q->where('user_id', $user->id))
+            ->when(!$user, fn($q) => $q->where('guest_id', $guestId))
+            ->sum('quantity');
+
+        // return response()->json($cartItems);
+        return response()->json([
+            'message' => 'Added to cart',
+            'cartItems' => $cartItems,
+            'totalCartCount' => $totalCartCount
+        ]);
     }
 
 

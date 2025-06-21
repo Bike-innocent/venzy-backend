@@ -42,7 +42,14 @@ class AuthController extends Controller
         // Merge guest cart
         $this->mergeGuestCart($request);
 
-        return response()->json(['user' => $user, 'access_token' => $token, 'token_type' => 'Bearer'], 201);
+        return response()->json([
+            'user' => $user,
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'cart_count' => CartItem::where('user_id', $user->id)
+                ->where('is_checked_out', false)
+                ->sum('quantity'),
+        ], 201);
     }
 
 
@@ -64,7 +71,14 @@ class AuthController extends Controller
         // Merge guest cart
         $this->mergeGuestCart($request);
 
-        return response()->json(['user' => $user, 'access_token' => $token, 'token_type' => 'Bearer'], 201);
+        return response()->json([
+            'user' => $user,
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'cart_count' => CartItem::where('user_id', $user->id)
+                ->where('is_checked_out', false)
+                ->sum('quantity'),
+        ], 201);
     }
 
 

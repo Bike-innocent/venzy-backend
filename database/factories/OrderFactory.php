@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Address;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -19,9 +20,10 @@ class OrderFactory extends Factory
     {
         return [
             'user_id' => User::inRandomOrder()->first()->id,
+            'address_id' => Address::inRandomOrder()->first()->id,
             'order_date' => $this->faker->dateTimeBetween('-1 year', 'now'),
             'total_amount' => $this->faker->randomFloat(2, 20, 1000),
-            'status' => $this->faker->randomElement(['pending', 'shipped', 'processing', 'delivered', 'cancelled']),
+            'status' => $this->faker->randomElement(['processing', 'shipped', 'delivered', 'returns', 'cancelled']),
         ];
     }
 }

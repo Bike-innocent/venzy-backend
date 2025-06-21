@@ -15,6 +15,7 @@ use App\Http\Controllers\Product\ColourController;
 use App\Http\Controllers\Product\SizeController;
 use App\Http\Controllers\Product\SupplierController;
 use App\Http\Controllers\Order\CustomerOrderController;
+use App\Http\Controllers\Order\OrderController;
 use App\Http\Controllers\Product\CartController;
 use App\Http\Controllers\Product\CategoryController;
 use App\Http\Controllers\Product\VariantOptionController;
@@ -121,6 +122,7 @@ Route::prefix('orders')->group(function () {
     Route::patch('{id}/restore', [CustomerOrderController::class, 'restore']);
 });
 
+Route::middleware('auth:sanctum')->post('/checkout', [OrderController::class, 'checkout']);
 
 
 
