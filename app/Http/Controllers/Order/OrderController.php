@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+
 class OrderController extends Controller
 {
     public function checkout(Request $request)
@@ -17,6 +18,15 @@ class OrderController extends Controller
         $validated = $request->validate([
             'address_id' => 'required|exists:addresses,id',
         ]);
+
+        // Ensure the address belongs to the authenticated user
+        $address = \App\Models\Address::where('id', $validated['address_id'])
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$address) {
+            return response()->json(['error' => 'Unauthorized address'], 403);
+        }
 
         DB::beginTransaction();
 
@@ -81,4 +91,181 @@ class OrderController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+
+
+
+
+    public function userOrders(Request $request)
+    {
+        $orders = Order::with(['items.product', 'items.variant', 'address'])
+            ->where('user_id', $request->user()->id)
+            ->latest()
+            ->get();
+
+        return response()->json($orders);
+    }
+
+
+    public function show($id)
+    {
+        $user = auth()->user();
+
+        $order = Order::with(['items.product.images', 'items.variant', 'address'])
+            ->where('user_id', $user->id)
+            ->where('id', $id)
+            ->first();
+
+        if (!$order) {
+            return response()->json(['error' => 'Order not found'], 404);
+        }
+
+        // Format product images with full URLs
+        foreach ($order->items as $item) {
+            if ($item->product && $item->product->images) {
+                $item->product->images = $item->product->images->map(function ($image) {
+                    if (!preg_match('/^http(s)?:\/\//', $image->image_path)) {
+                        $image->image_path = url('product-images/' . $image->image_path);
+                    }
+                    return $image;
+                });
+            }
+        }
+
+        return response()->json($order);
+    }
+
+
+
+
+
+
+
+public function cancel($id)
+{
+    $order = Order::where('id', $id)
+                  ->where('user_id', auth()->id())
+                  ->where('status', 'processing') // User can only cancel before shipment
+                  ->firstOrFail();
+
+    $order->status = 'cancelled';
+    $order->save();
+
+    return response()->json(['message' => 'Order cancelled successfully.']);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // public function allOrders()
+    // {
+    //     $orders = Order::with(['user', 'items.product', 'items.variant', 'address'])
+    //         ->latest()
+    //         ->get();
+
+    //     return response()->json($orders);
+    // }
+
+    // public function orderDetails($id)
+    // {
+    //     $order = Order::with(['items.product', 'items.variant', 'address'])
+    //         ->where('id', $id)
+    //         ->first();
+
+    //     if (!$order) {
+    //         return response()->json(['error' => 'Order not found'], 404);
+    //     }
+
+    //     return response()->json($order);
+    // }
+
+    // public function updateOrderStatus(Request $request, $id)
+    // {
+    //     $validated = $request->validate([
+    //         'status' => 'required|string|in:processing,shipped,delivered,cancelled',
+    //     ]);
+
+    //     $order = Order::find($id);
+
+    //     if (!$order) {
+    //         return response()->json(['error' => 'Order not found'], 404);
+    //     }
+
+    //     // Ensure the user is authorized to update this order
+    //     if ($order->user_id !== $request->user()->id && !$request->user()->hasRole('admin')) {
+    //         return response()->json(['error' => 'Unauthorized'], 403);
+    //     }
+
+    //     $order->status = $validated['status'];
+    //     $order->save();
+
+    //     return response()->json(['message' => 'Order status updated successfully']);
+    // }
+
+    // public function deleteOrder($id)
+    // {
+    //     $order = Order::find($id);
+
+    //     if (!$order) {
+    //         return response()->json(['error' => 'Order not found'], 404);
+    //     }
+
+    //     // Ensure the user is authorized to delete this order
+    //     if ($order->user_id !== request()->user()->id && !request()->user()->hasRole('admin')) {
+    //         return response()->json(['error' => 'Unauthorized'], 403);
+    //     }
+
+    //     $order->delete();
+
+    //     return response()->json(['message' => 'Order deleted successfully']);
+    // }
+    // public function userOrderDetails($id, Request $request)
+    // {
+    //     $order = Order::with(['items.product', 'items.variant', 'address'])
+    //         ->where('id', $id)
+    //         ->where('user_id', $request->user()->id)
+    //         ->first();
+
+    //     if (!$order) {
+    //         return response()->json(['error' => 'Order not found'], 404);
+    //     }
+
+    //     return response()->json($order);
+    // }

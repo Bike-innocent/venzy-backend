@@ -7,6 +7,7 @@ use App\Http\Controllers\Profile\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Sanctum\Http\Controllers\CsrfCookieController;
 use App\Http\Controllers\Contact\ContactController;
+use App\Http\Controllers\Order\AdminOrderController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\Product\ProductController;
 use App\Http\Controllers\Product\ProductCategoryController;
@@ -23,7 +24,7 @@ use App\Http\Controllers\Product\VariantValueController;
 // use App\Http\Controllers\Address\AddressController;
 use App\Http\Controllers\Profile\EmailUpdateController;
 use App\Http\Controllers\User\AddressController;
-use Illuminate\Session\Middleware\StartSession;
+use App\Http\Controllers\Customer\AdminCustomerController;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -124,7 +125,18 @@ Route::prefix('orders')->group(function () {
 
 Route::middleware('auth:sanctum')->post('/checkout', [OrderController::class, 'checkout']);
 
+Route::middleware('auth:sanctum')->get('/user/orders', [OrderController::class, 'userOrders']);
+Route::middleware('auth:sanctum')->get('/user/orders/{id}', [OrderController::class, 'show']);
+Route::delete('/user/orders/{id}/cancel', [OrderController::class, 'cancel'])->middleware('auth:sanctum');
 
+
+
+
+
+Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
+    Route::get('/customers', [AdminCustomerController::class, 'index']);
+    Route::get('/customers/{id}', [AdminCustomerController::class, 'show']);
+});
 
 
 
@@ -166,3 +178,15 @@ Route::get('/users', [UserController::class, 'index']);
 //     Route::put('/addresses/{id}', [AddressController::class, 'update']);
 //     Route::delete('/addresses/{id}', [AddressController::class, 'destroy']);
 // });
+
+
+
+
+  Route::get('admin/orders', [AdminOrderController::class, 'index']);
+  Route::get('/admin/orders/{id}', [AdminOrderController::class, 'show']);
+     Route::patch('admin/orders/{id}/status', [AdminOrderController::class, 'updateStatus']);
+
+     // User
+
+// Admin
+Route::delete('/admin/orders/{id}/cancel', [AdminOrderController::class, 'adminCancel'])->middleware('auth:sanctum');

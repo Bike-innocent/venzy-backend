@@ -14,10 +14,9 @@ class CustomerOrderController extends Controller
     // Get all customer orders
     public function index()
     {
-        $orders = Order::with('items.product', 'user')->get();
+        $orders = Order::with(['items.product', 'items.variant', 'address'])->get();
         return response()->json($orders);
     }
-
 
 
 
