@@ -55,7 +55,7 @@ class AddressFactory extends Factory
             // 'postal_code' => $this->faker->postcode(),
             'country' => $this->faker->country(),
 
-            'is_default' => false, // optionally toggle true in a seeder
+            'is_default' => false, 
         ];
     }
 }

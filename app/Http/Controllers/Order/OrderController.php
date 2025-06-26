@@ -11,88 +11,241 @@ use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // public function checkout(Request $request)
+    // {
+    //     $user = $request->user();
+
+    //     $validated = $request->validate([
+    //         'address_id' => 'required|exists:addresses,id',
+    //     ]);
+
+    //     // Ensure the address belongs to the authenticated user
+    //     $address = \App\Models\Address::where('id', $validated['address_id'])
+    //         ->where('user_id', $user->id)
+    //         ->first();
+
+    //     if (!$address) {
+    //         return response()->json(['error' => 'Unauthorized address'], 403);
+    //     }
+
+    //     DB::beginTransaction();
+
+    //     try {
+    //         $cartItems = CartItem::with('product', 'variant')
+    //             ->where('user_id', $user->id)
+    //             ->where('is_checked_out', false)
+    //             ->get();
+
+    //         if ($cartItems->isEmpty()) {
+    //             return response()->json(['error' => 'Cart is empty'], 400);
+    //         }
+
+    //         $total = 0;
+
+    //         foreach ($cartItems as $item) {
+    //             $stock = $item->variant ? $item->variant->stock : $item->product->stock;
+
+    //             if ($item->quantity > $stock) {
+    //                 throw new \Exception('Item out of stock: ' . $item->product->name);
+    //             }
+
+    //             $total += $item->quantity * $item->price;
+    //         }
+
+    //         $order = Order::create([
+    //             'user_id' => $user->id,
+    //             'address_id' => $validated['address_id'],
+    //             'order_date' => now(),
+    //             'total_amount' => $total,
+    //             'status' => 'processing',
+    //         ]);
+
+    //         foreach ($cartItems as $item) {
+    //             OrderItem::create([
+    //                 'order_id' => $order->id,
+    //                 'product_id' => $item->product_id,
+    //                 'product_variant_id' => $item->product_variant_id,
+    //                 'quantity' => $item->quantity,
+    //                 'price' => $item->price,
+    //             ]);
+
+    //             // Update stock
+    //             if ($item->variant) {
+    //                 $item->variant->decrement('stock', $item->quantity);
+    //             } else {
+    //                 $item->product->decrement('stock', $item->quantity);
+    //             }
+
+    //             $item->is_checked_out = true;
+    //             $item->save();
+    //         }
+
+    //         DB::commit();
+
+    //         return response()->json([
+    //             'message' => 'Order placed successfully',
+    //             'order_id' => $order->id
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         return response()->json(['error' => $e->getMessage()], 500);
+    //     }
+    // }
+
+
+
+
     public function checkout(Request $request)
-    {
-        $user = $request->user();
+{
+    $user = $request->user();
 
-        $validated = $request->validate([
-            'address_id' => 'required|exists:addresses,id',
-        ]);
+    $validated = $request->validate([
+        'address_id' => 'required|exists:addresses,id',
+    ]);
 
-        // Ensure the address belongs to the authenticated user
-        $address = \App\Models\Address::where('id', $validated['address_id'])
-            ->where('user_id', $user->id)
-            ->first();
+    $address = \App\Models\Address::where('id', $validated['address_id'])
+        ->where('user_id', $user->id)
+        ->first();
 
-        if (!$address) {
-            return response()->json(['error' => 'Unauthorized address'], 403);
-        }
-
-        DB::beginTransaction();
-
-        try {
-            $cartItems = CartItem::with('product', 'variant')
-                ->where('user_id', $user->id)
-                ->where('is_checked_out', false)
-                ->get();
-
-            if ($cartItems->isEmpty()) {
-                return response()->json(['error' => 'Cart is empty'], 400);
-            }
-
-            $total = 0;
-
-            foreach ($cartItems as $item) {
-                $stock = $item->variant ? $item->variant->stock : $item->product->stock;
-
-                if ($item->quantity > $stock) {
-                    throw new \Exception('Item out of stock: ' . $item->product->name);
-                }
-
-                $total += $item->quantity * $item->price;
-            }
-
-            $order = Order::create([
-                'user_id' => $user->id,
-                'address_id' => $validated['address_id'],
-                'order_date' => now(),
-                'total_amount' => $total,
-                'status' => 'processing',
-            ]);
-
-            foreach ($cartItems as $item) {
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $item->product_id,
-                    'product_variant_id' => $item->product_variant_id,
-                    'quantity' => $item->quantity,
-                    'price' => $item->price,
-                ]);
-
-                // Update stock
-                if ($item->variant) {
-                    $item->variant->decrement('stock', $item->quantity);
-                } else {
-                    $item->product->decrement('stock', $item->quantity);
-                }
-
-                $item->is_checked_out = true;
-                $item->save();
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'message' => 'Order placed successfully',
-                'order_id' => $order->id
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
+    if (!$address) {
+        return response()->json(['error' => 'Unauthorized address'], 403);
     }
 
+    DB::beginTransaction();
 
+    try {
+        $cartItems = CartItem::with('product', 'variant')
+            ->where('user_id', $user->id)
+            ->where('is_checked_out', false)
+            ->get();
+
+        if ($cartItems->isEmpty()) {
+            return response()->json(['error' => 'Cart is empty'], 400);
+        }
+
+        $total = 0;
+
+        foreach ($cartItems as $item) {
+            $variant = $item->variant;
+            $product = $item->product;
+
+            // Check committed quantity for this variant
+            $committed = 0;
+
+            if ($variant) {
+                $committed = $variant->orderItems()
+                    ->whereHas('order', function ($q) {
+                        $q->whereIn('status', ['processing', 'shipped']);
+                    })->sum('quantity');
+
+                $available = max(0, $variant->stock - $committed);
+            } else {
+                $committed = $product->orderItems()
+                    ->whereHas('order', function ($q) {
+                        $q->whereIn('status', ['processing', 'shipped']);
+                    })->sum('quantity');
+
+                $available = max(0, $product->stock - $committed);
+            }
+
+            if ($item->quantity > $available) {
+                throw new \Exception('Insufficient available stock for: ' . $product->name);
+            }
+
+            $total += $item->quantity * $item->price;
+        }
+
+        $order = Order::create([
+            'user_id' => $user->id,
+            'address_id' => $validated['address_id'],
+            'order_date' => now(),
+            'total_amount' => $total,
+            'status' => 'processing',
+        ]);
+
+        foreach ($cartItems as $item) {
+            OrderItem::create([
+                'order_id' => $order->id,
+                'product_id' => $item->product_id,
+                'product_variant_id' => $item->product_variant_id,
+                'quantity' => $item->quantity,
+                'price' => $item->price,
+            ]);
+
+            // ✅ Do NOT decrement stock here
+            $item->is_checked_out = true;
+            $item->save();
+        }
+
+        DB::commit();
+
+        return response()->json([
+            'message' => 'Order placed successfully',
+            'order_id' => $order->id
+        ]);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
 
 
     public function userOrders(Request $request)
@@ -104,6 +257,11 @@ class OrderController extends Controller
 
         return response()->json($orders);
     }
+
+
+
+
+    
 
 
     public function show($id)

@@ -25,6 +25,8 @@ use App\Http\Controllers\Product\VariantValueController;
 use App\Http\Controllers\Profile\EmailUpdateController;
 use App\Http\Controllers\User\AddressController;
 use App\Http\Controllers\Customer\AdminCustomerController;
+use App\Http\Controllers\Product\DiscountController;
+use App\Http\Controllers\Product\InventoryController;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -136,6 +138,9 @@ Route::delete('/user/orders/{id}/cancel', [OrderController::class, 'cancel'])->m
 Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     Route::get('/customers', [AdminCustomerController::class, 'index']);
     Route::get('/customers/{id}', [AdminCustomerController::class, 'show']);
+
+     Route::get('/discounts', [DiscountController::class, 'index']);
+    Route::post('/discounts', [DiscountController::class, 'store']);
 });
 
 
@@ -183,6 +188,7 @@ Route::get('/users', [UserController::class, 'index']);
 
 
   Route::get('admin/orders', [AdminOrderController::class, 'index']);
+
   Route::get('/admin/orders/{id}', [AdminOrderController::class, 'show']);
      Route::patch('admin/orders/{id}/status', [AdminOrderController::class, 'updateStatus']);
 
@@ -190,3 +196,8 @@ Route::get('/users', [UserController::class, 'index']);
 
 // Admin
 Route::delete('/admin/orders/{id}/cancel', [AdminOrderController::class, 'adminCancel'])->middleware('auth:sanctum');
+
+
+
+ Route::get('admin/inventory', [InventoryController::class, 'index']);
+Route::patch('/admin/inventory/update-stock/{type}/{id}', [InventoryController::class, 'updateStock']);

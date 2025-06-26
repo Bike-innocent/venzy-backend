@@ -10,6 +10,7 @@ use App\Models\ProductImage;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Models\OrderItem;
 use App\Models\ProductVariant;
 use App\Models\ProductVariantValue;
 use App\Models\VariantOption;
@@ -559,69 +560,187 @@ class ProductController extends Controller
 
 
 
-    public function show($slug)
-    {
-        $product = Product::with([
-            'category',
-            'brand',
-            'images',
-            'variants.variantValues.variantOptionValue.variantOption',
-            // 'productVariantOptions.variantOption',
-        ])->where('slug', $slug)->firstOrFail();
+    // public function show($slug)
+    // {
+    //     $product = Product::with([
+    //         'category',
+    //         'brand',
+    //         'images',
+    //         'variants.variantValues.variantOptionValue.variantOption',
+    //         // 'productVariantOptions.variantOption',
+    //     ])->where('slug', $slug)->firstOrFail();
 
 
-        // Format image paths
-        $product->images = $product->images->map(function ($image) {
-            $image->image_path = url('product-images/' . $image->image_path);
-            return $image;
-        });
+    //     // Format image paths
+    //     $product->images = $product->images->map(function ($image) {
+    //         $image->image_path = url('product-images/' . $image->image_path);
+    //         return $image;
+    //     });
+
+
+    //     $product->variants = $product->variants->map(function ($variant) {
+    //         $attributes = [];
+
+    //         foreach ($variant->variantValues as $vv) {
+    //             $optionValue = $vv->variantOptionValue;
+    //             $option = $optionValue?->option;
+
+    //             if ($option && $optionValue) {
+    //                 $attributes[$option->name] = $optionValue->value;
+    //             }
+    //         }
+
+    //         // Calculate committed quantity for this variant
+    //         $committed = OrderItem::where('product_variant_id', $variant->id)
+    //             ->whereHas('order', function ($q) {
+    //                 $q->whereIn('status', ['processing', 'shipped']);
+    //             })
+    //             ->sum('quantity');
+
+    //         $onHand = $variant->stock;
+    //         $available = max(0, $onHand - $committed);
+
+    //         $variant->attributes = $attributes;
+    //         $variant->available_stock = $available; // ✅ Append to API response
+    //         unset($variant->variantValues);
+
+    //         return $variant;
+    //     });
 
 
 
-        $product->variants = $product->variants->map(function ($variant) {
-            $attributes = [];
 
-            foreach ($variant->variantValues as $vv) {
-                $optionValue = $vv->variantOptionValue;
-                $option = $optionValue?->option;
 
-                if ($option && $optionValue) {
-                    $attributes[$option->name] = $optionValue->value;
-                }
+
+
+
+    //     // Get variant options with only values used by this product
+    //     $variantOptionIds = $product->productVariantOptions()->pluck('variant_option_id');
+
+    //     $usedValueIds = DB::table('product_variant_values')
+    //         ->join('product_variants', 'product_variant_values.product_variant_id', '=', 'product_variants.id')
+    //         ->where('product_variants.product_id', $product->id)
+    //         ->pluck('variant_option_value_id')
+    //         ->unique();
+
+
+
+    //     $variantOptions = \App\Models\VariantOption::with(['values' => function ($query) use ($usedValueIds) {
+    //         $query->whereIn('id', $usedValueIds);
+    //     }])->whereIn('id', $variantOptionIds)->get();
+
+    //     $product->setRelation('variant_options', $variantOptions); // or $product->variant_options = $variantOptions
+
+
+    //     return response()->json($product);
+    // }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+public function show($slug)
+{
+    $product = Product::with([
+        'category',
+        'brand',
+        'images',
+        'variants.variantValues.variantOptionValue.variantOption',
+    ])->where('slug', $slug)->firstOrFail();
+
+    // Format image paths
+    $product->images = $product->images->map(function ($image) {
+        $image->image_path = url('product-images/' . $image->image_path);
+        return $image;
+    });
+
+    // Handle variants
+    $product->variants = $product->variants->map(function ($variant) {
+        $attributes = [];
+
+        foreach ($variant->variantValues as $vv) {
+            $optionValue = $vv->variantOptionValue;
+            $option = $optionValue?->option;
+
+            if ($option && $optionValue) {
+                $attributes[$option->name] = $optionValue->value;
             }
+        }
 
-            $variant->attributes = $attributes;
-            unset($variant->variantValues); // Optional cleanup
-            return $variant;
-        });
+        // Calculate committed quantity for this variant
+        $committed = OrderItem::where('product_variant_id', $variant->id)
+            ->whereHas('order', function ($q) {
+                $q->whereIn('status', ['processing', 'shipped']);
+            })
+            ->sum('quantity');
 
+        $onHand = $variant->stock;
+        $available = max(0, $onHand - $committed);
 
+        $variant->attributes = $attributes;
+        $variant->available_stock = $available;
+        unset($variant->variantValues);
 
+        return $variant;
+    });
 
-        // Get variant options with only values used by this product
-        $variantOptionIds = $product->productVariantOptions()->pluck('variant_option_id');
+    // ✅ If no variants, calculate available_stock for the simple product
+    if ($product->variants->isEmpty()) {
+        $committed = OrderItem::where('product_id', $product->id)
+            ->whereNull('product_variant_id') // Only non-variant orders
+            ->whereHas('order', function ($q) {
+                $q->whereIn('status', ['processing', 'shipped']);
+            })
+            ->sum('quantity');
 
-        $usedValueIds = DB::table('product_variant_values')
-            ->join('product_variants', 'product_variant_values.product_variant_id', '=', 'product_variants.id')
-            ->where('product_variants.product_id', $product->id)
-            ->pluck('variant_option_value_id')
-            ->unique();
-
-        // $variantOptions = \App\Models\VariantOption::with(['values' => function ($query) use ($usedValueIds) {
-        //     $query->whereIn('id', $usedValueIds);
-        // }])->whereIn('id', $variantOptionIds)->get();
-
-        // $product->variant_options = $variantOptions;
-
-        $variantOptions = \App\Models\VariantOption::with(['values' => function ($query) use ($usedValueIds) {
-            $query->whereIn('id', $usedValueIds);
-        }])->whereIn('id', $variantOptionIds)->get();
-
-        $product->setRelation('variant_options', $variantOptions); // or $product->variant_options = $variantOptions
-
-
-        return response()->json($product);
+        $onHand = $product->stock;
+        $available = max(0, $onHand - $committed);
+        $product->available_stock = $available; // ✅ Add to response
     }
+
+    // Get variant options used by this product
+    $variantOptionIds = $product->productVariantOptions()->pluck('variant_option_id');
+
+    $usedValueIds = DB::table('product_variant_values')
+        ->join('product_variants', 'product_variant_values.product_variant_id', '=', 'product_variants.id')
+        ->where('product_variants.product_id', $product->id)
+        ->pluck('variant_option_value_id')
+        ->unique();
+
+    $variantOptions = \App\Models\VariantOption::with(['values' => function ($query) use ($usedValueIds) {
+        $query->whereIn('id', $usedValueIds);
+    }])->whereIn('id', $variantOptionIds)->get();
+
+    $product->setRelation('variant_options', $variantOptions);
+
+    return response()->json($product);
+}
+
+
 
 
 
@@ -643,36 +762,36 @@ class ProductController extends Controller
 
 
 
-public function destroy($slug)
-{
-    // Find the product
-    $product = Product::where('slug', $slug)->firstOrFail();
+    public function destroy($slug)
+    {
+        // Find the product
+        $product = Product::where('slug', $slug)->firstOrFail();
 
-    // Wrap in a transaction to ensure all deletions happen atomically
-    DB::beginTransaction();
+        // Wrap in a transaction to ensure all deletions happen atomically
+        DB::beginTransaction();
 
-    try {
-        // Delete related variants
-        DB::statement('DELETE FROM product_variants WHERE product_id = ?', [$product->id]);
+        try {
+            // Delete related variants
+            DB::statement('DELETE FROM product_variants WHERE product_id = ?', [$product->id]);
 
-        // Delete variant options
-        DB::statement('DELETE FROM product_variant_options WHERE product_id = ?', [$product->id]);
+            // Delete variant options
+            DB::statement('DELETE FROM product_variant_options WHERE product_id = ?', [$product->id]);
 
-        // Delete images
-        DB::statement('DELETE FROM product_images WHERE product_id = ?', [$product->id]);
+            // Delete images
+            DB::statement('DELETE FROM product_images WHERE product_id = ?', [$product->id]);
 
-        // Delete the product itself
-        DB::statement('DELETE FROM products WHERE id = ?', [$product->id]);
+            // Delete the product itself
+            DB::statement('DELETE FROM products WHERE id = ?', [$product->id]);
 
-        DB::commit();
+            DB::commit();
 
-        return response()->json(['message' => 'Product deleted successfully.']);
-    } catch (\Exception $e) {
-        DB::rollBack();
-        // Log error or handle as needed
-        return response()->json(['error' => 'Failed to delete product.'], 500);
+            return response()->json(['message' => 'Product deleted successfully.']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            // Log error or handle as needed
+            return response()->json(['error' => 'Failed to delete product.'], 500);
+        }
     }
-}
 }
 
 

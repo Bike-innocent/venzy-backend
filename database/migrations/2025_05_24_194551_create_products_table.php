@@ -33,7 +33,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('slug')->unique();
             $table->text('description');
-            $table->decimal('average_price', 10, 2);
+            $table->decimal('average_price', 10, 2);  //use incase of simple product
             $table->decimal('compared_at_price', 10, 2)->nullable();
              $table->integer('stock'); 
             $table->boolean('status')->default(true);

@@ -29,13 +29,17 @@ class ProductVariant extends Model
     }
 
 
-   
+
     public function variantValues()
     {
         return $this->hasMany(ProductVariantValue::class, 'product_variant_id');
     }
 
 
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
+    }
 }
 
 
