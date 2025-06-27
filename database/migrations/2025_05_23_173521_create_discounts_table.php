@@ -11,33 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Schema::create('discounts', function (Blueprint $table) {
-        //     $table->id();
-        //     $table->string('code')->unique(); // Required to apply manually
-        //     $table->enum('type', ['fixed', 'percentage', 'free_shipping']);
-        //     $table->decimal('amount', 10, 2)->nullable(); // Only for fixed or percentage
-        //     $table->decimal('min_order_amount', 10, 2)->nullable(); // e.g. ₦500+
-
-        //     $table->unsignedInteger('usage_limit')->nullable(); // e.g. 1000 uses
-        //     $table->unsignedInteger('used_count')->default(0); // Track usage
-
-        //     $table->boolean('is_active')->default(true);
-        //     $table->timestamp('starts_at')->nullable();
-        //     $table->timestamp('ends_at')->nullable();
-
-        //     $table->timestamps();
-        // });
 
         Schema::create('discounts', function (Blueprint $table) {
             $table->id();
 
-            $table->string('code')->unique()->nullable(); // nullable for auto-applied discounts
-            $table->enum('discount_type', ['order', 'product', 'shipping']); // What the discount targets
-            $table->enum('value_type', ['fixed', 'percentage']);
-            $table->decimal('value', 10, 2)->nullable(); // Discount amount or percentage (based on value_type)
+            $table->string('code')->unique()->nullable();
+            $table->enum('discount_method', ['code', 'automatic'])->default('code');
+            $table->string('title')->unique()->nullable(); // required for automatic method
+            $table->enum('discount_type', ['order', 'product', 'shipping']);
+            $table->enum('value_type', ['fixed', 'percentage'])->nullable();
+            $table->decimal('value', 10, 2)->nullable();
 
-            $table->enum('requirement_type', ['none', 'min_order_amount', 'min_quantity'])->default('none');
-            $table->decimal('min_order_amount', 10, 2)->nullable();
+            $table->enum('requirement_type', ['none', 'min_purchase_amount', 'min_quantity'])->default('none');
+            $table->decimal('min_purchase_amount', 10, 2)->nullable();  // ← Renamed here
             $table->unsignedInteger('min_quantity')->nullable();
 
             $table->unsignedInteger('usage_limit')->nullable();

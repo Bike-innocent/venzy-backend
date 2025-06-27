@@ -7,7 +7,7 @@
 // php artisan make:migration create_product_categories_table
 // php artisan make:migration create_brands_table
 // php artisan make:migration create_variant_options_table
-// php artisan make:migration create_discounts_table
+// php artisan make:migration create_discount_product_variant_table
 // php artisan make:migration create_suppliers_table
 // php artisan make:migration create_product_variant_values_table
 // php artisan make:migration create_order_items_table

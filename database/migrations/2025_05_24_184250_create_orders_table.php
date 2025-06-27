@@ -14,13 +14,15 @@ return new class extends Migration
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('address_id')->constrained()->onDelete('cascade'); 
-            
+            $table->foreignId('address_id')->constrained()->onDelete('cascade');
+
             $table->dateTime('order_date');
+            $table->foreignId('discount_id')->nullable()->constrained()->onDelete('set null');
+            $table->decimal('discount_amount', 10, 2)->default(0);
             $table->decimal('total_amount', 10, 2);
-            
+
             $table->enum('status', ['processing', 'shipped', 'delivered', 'returns', 'cancelled']);
-            
+
             $table->timestamps();
             $table->softDeletes();
         });
@@ -58,4 +60,4 @@ return new class extends Migration
 //             $table->string('coupon_code')->nullable(); // Optional coupon code
 //             $table->decimal('discount_amount', 10, 2)->default(0.00); // Default discount amount
 //             $table->decimal('tax_amount', 10, 2)->default(0.00); // Default tax amount
-//             $table->decimal('subtotal_amount', 10, 2)->default(0.00); // Default subtotal amount           
+//             $table->decimal('subtotal_amount', 10, 2)->default(0.00); // Default subtotal amount

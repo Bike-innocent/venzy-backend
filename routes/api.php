@@ -139,9 +139,20 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     Route::get('/customers', [AdminCustomerController::class, 'index']);
     Route::get('/customers/{id}', [AdminCustomerController::class, 'show']);
 
-     Route::get('/discounts', [DiscountController::class, 'index']);
+    Route::get('/discounts', [DiscountController::class, 'index']);
     Route::post('/discounts', [DiscountController::class, 'store']);
+
+    Route::get('/discounts/{id}', [DiscountController::class, 'show']);
+    Route::put('/discounts/{id}', [DiscountController::class, 'update']);
+
+    Route::delete('/discounts/{id}', [DiscountController::class, 'destroy']);
+
 });
+
+    Route::middleware('auth:sanctum')->post('/apply-discount', [DiscountController::class, 'applyDiscount']);
+    Route::middleware('auth:sanctum')->get('/auto-discount', [DiscountController::class, 'checkAutomaticDiscount']);
+
+
 
 
 
@@ -187,17 +198,17 @@ Route::get('/users', [UserController::class, 'index']);
 
 
 
-  Route::get('admin/orders', [AdminOrderController::class, 'index']);
+Route::get('admin/orders', [AdminOrderController::class, 'index']);
 
-  Route::get('/admin/orders/{id}', [AdminOrderController::class, 'show']);
-     Route::patch('admin/orders/{id}/status', [AdminOrderController::class, 'updateStatus']);
+Route::get('/admin/orders/{id}', [AdminOrderController::class, 'show']);
+Route::patch('admin/orders/{id}/status', [AdminOrderController::class, 'updateStatus']);
 
-     // User
+// User
 
 // Admin
 Route::delete('/admin/orders/{id}/cancel', [AdminOrderController::class, 'adminCancel'])->middleware('auth:sanctum');
 
 
 
- Route::get('admin/inventory', [InventoryController::class, 'index']);
+Route::get('admin/inventory', [InventoryController::class, 'index']);
 Route::patch('/admin/inventory/update-stock/{type}/{id}', [InventoryController::class, 'updateStock']);

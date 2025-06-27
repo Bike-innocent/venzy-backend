@@ -13,4 +13,55 @@ class Discount extends Model
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
     ];
+
+
+    public function isEligibleForCart($cartItems)
+    {
+        $subtotal = $cartItems->sum(fn($item) => $item->quantity * $item->price);
+        $totalQuantity = $cartItems->sum('quantity');
+
+        return match ($this->requirement_type) {
+            'none' => true,
+            'min_purchase_amount' => $subtotal >= $this->min_purchase_amount,
+            'min_quantity' => $totalQuantity >= $this->min_quantity,
+            default => false,
+        };
+    }
+
+    public function estimatedValue($cartItems)
+    {
+        $subtotal = $cartItems->sum(fn($item) => $item->quantity * $item->price);
+        $shippingPrice = 500;
+
+        return match ($this->discount_type) {
+            'order' => $this->value_type === 'percentage'
+                ? $subtotal * $this->value / 100
+                : $this->value,
+            'shipping' => $this->value_type === 'percentage'
+                ? $shippingPrice * $this->value / 100
+                : ($this->value ?? $shippingPrice),
+            default => 0,
+        };
+    }
+
+
+    public function products()
+    {
+        return $this->belongsToMany(Product::class, 'discount_product');
+    }
+
+    public function variants()
+    {
+        return $this->belongsToMany(ProductVariant::class, 'discount_product_variant');
+    }
+
+    public function users()
+    {
+        return $this->belongsToMany(User::class, 'discount_user');
+    }
+
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
+    }
 }
