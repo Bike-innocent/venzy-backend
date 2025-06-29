@@ -27,7 +27,9 @@ return new class extends Migration
             $table->unsignedInteger('min_quantity')->nullable();
 
             $table->unsignedInteger('usage_limit')->nullable();
+            $table->boolean('once_per_user')->default(false);
             $table->unsignedInteger('used_count')->default(0);
+            
             $table->boolean('is_active')->default(true);
 
             $table->timestamp('starts_at')->nullable();

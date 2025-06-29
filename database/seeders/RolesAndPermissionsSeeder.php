@@ -36,11 +36,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $adminRole = Role::create(['name' => 'admin']);
         $adminRole->givePermissionTo(Permission::all());
 
-        // Optional: Assign roles to users (uncomment if needed)
-        // \App\Models\User::find(1)->assignRole('admin'); // Assign Admin role to first user
-        // \App\Models\User::find(2)->assignRole('supplier'); // Assign Supplier role to second user
-
-        // Output a message for confirmation
+       
         $this->command->info('Roles and permissions seeded successfully.');
     }
 }

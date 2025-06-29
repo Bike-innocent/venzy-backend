@@ -36,6 +36,8 @@ class DiscountController extends Controller
             'min_quantity' => 'nullable|integer|min:1',
 
             'usage_limit' => 'nullable|integer|min:1',
+            'once_per_user' => 'nullable|boolean',
+
             'starts_at' => 'nullable|date',
             'ends_at' => 'nullable|date|after_or_equal:starts_at',
         ]);
@@ -61,6 +63,9 @@ class DiscountController extends Controller
         if ($validated['requirement_type'] !== 'min_quantity') {
             $validated['min_quantity'] = null;
         }
+
+        $validated['once_per_user'] = $validated['once_per_user'] ?? false;
+
 
         $discount = Discount::create($validated);
 
@@ -97,6 +102,8 @@ class DiscountController extends Controller
             'min_quantity' => 'nullable|integer|min:1',
 
             'usage_limit' => 'nullable|integer|min:1',
+            'once_per_user' => 'nullable|boolean',
+
             'starts_at' => 'nullable|date',
             'ends_at' => 'nullable|date|after_or_equal:starts_at',
         ]);
@@ -119,6 +126,8 @@ class DiscountController extends Controller
         if ($validated['requirement_type'] !== 'min_quantity') {
             $validated['min_quantity'] = null;
         }
+        $validated['once_per_user'] = $validated['once_per_user'] ?? false;
+
 
         $discount->update($validated);
 
@@ -144,6 +153,69 @@ class DiscountController extends Controller
 
 
 
+
+
+
+
+
+    // public function applyDiscount(Request $request)
+    // {
+    //     $user = $request->user();
+
+    //     $request->validate([
+    //         'code' => 'required|string',
+    //     ]);
+
+    //     $discount = Discount::where('code', $request->code)
+    //         ->where('discount_method', 'code')
+    //         ->where('is_active', true)
+    //         ->where(function ($q) {
+    //             $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
+    //         })
+    //         ->where(function ($q) {
+    //             $q->whereNull('ends_at')->orWhere('ends_at', '>=', now());
+    //         })
+    //         ->first();
+
+    //     if (!$discount) {
+    //         return response()->json(['message' => 'Invalid or expired code'], 404);
+    //     }
+
+    //     // 🛒 Fetch the user's current cart
+    //     $cartItems = CartItem::where('user_id', $user->id)
+    //         ->where('is_checked_out', false)
+    //         ->get();
+
+    //     if ($cartItems->isEmpty()) {
+    //         return response()->json(['message' => 'Your cart is empty'], 400);
+    //     }
+
+    //     // 🧮 Calculate cart totals
+    //     $subtotal = $cartItems->sum(fn($item) => $item->quantity * $item->price);
+    //     $totalQuantity = $cartItems->sum('quantity');
+
+    //     // ✅ Validate the requirement
+    //     $meetsRequirement = match ($discount->requirement_type) {
+    //         'none' => true,
+    //         'min_purchase_amount' => $subtotal >= $discount->min_purchase_amount,
+    //         'min_quantity' => $totalQuantity >= $discount->min_quantity,
+    //         default => false,
+    //     };
+
+    //     if (!$meetsRequirement) {
+    //         $reason = match ($discount->requirement_type) {
+    //             'min_purchase_amount' => "Requires minimum purchase of ₦{$discount->min_purchase_amount}",
+    //             'min_quantity' => "Requires minimum quantity of {$discount->min_quantity} items",
+    //             default => "You don't meet the discount conditions",
+    //         };
+
+    //         return response()->json(['message' => $reason], 400);
+    //     }
+
+    //     // ⚠️ (Optional) Handle usage limits, user-specific usage tracking, etc.
+
+    //     return response()->json(['discount' => $discount]);
+    // }
 
 
 
@@ -181,19 +253,23 @@ class DiscountController extends Controller
             return response()->json(['message' => 'Your cart is empty'], 400);
         }
 
-        // 🧮 Calculate cart totals
-        $subtotal = $cartItems->sum(fn($item) => $item->quantity * $item->price);
-        $totalQuantity = $cartItems->sum('quantity');
 
-        // ✅ Validate the requirement
-        $meetsRequirement = match ($discount->requirement_type) {
-            'none' => true,
-            'min_purchase_amount' => $subtotal >= $discount->min_purchase_amount,
-            'min_quantity' => $totalQuantity >= $discount->min_quantity,
-            default => false,
-        };
 
-        if (!$meetsRequirement) {
+        // ✅ Specific check for global usage limit
+        if (!is_null($discount->usage_limit) && $discount->used_count >= $discount->usage_limit) {
+            return response()->json(['message' => 'This discount has reached its usage limit.'], 400);
+        }
+
+        // ✅ Specific check for once-per-user
+        if ($discount->once_per_user && $user) {
+            $hasUsed = $discount->users()->where('user_id', $user->id)->exists();
+            if ($hasUsed) {
+                return response()->json(['message' => 'You have already used this discount.'], 400);
+            }
+        }
+
+        // ✅ Check if cart meets requirements
+        if (!$discount->isEligibleForCart($cartItems, $user)) {
             $reason = match ($discount->requirement_type) {
                 'min_purchase_amount' => "Requires minimum purchase of ₦{$discount->min_purchase_amount}",
                 'min_quantity' => "Requires minimum quantity of {$discount->min_quantity} items",
@@ -203,14 +279,11 @@ class DiscountController extends Controller
             return response()->json(['message' => $reason], 400);
         }
 
-        // ⚠️ (Optional) Handle usage limits, user-specific usage tracking, etc.
+
+      
 
         return response()->json(['discount' => $discount]);
     }
-
-
-
-
 
 
 
@@ -242,7 +315,7 @@ class DiscountController extends Controller
                 $q->whereNull('ends_at')->orWhere('ends_at', '>=', now());
             })
             ->get()
-            ->filter(fn($discount) => $discount->isEligibleForCart($cartItems)) //helper
+            ->filter(fn($discount) => $discount->isEligibleForCart($cartItems, $user)) //helper
             ->sortByDesc(fn($d) => $d->estimatedValue($cartItems)) // You can implement this if needed
             ->first();
 

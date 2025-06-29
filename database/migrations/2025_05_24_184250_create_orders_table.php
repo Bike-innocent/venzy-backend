@@ -19,6 +19,8 @@ return new class extends Migration
             $table->dateTime('order_date');
             $table->foreignId('discount_id')->nullable()->constrained()->onDelete('set null');
             $table->decimal('discount_amount', 10, 2)->default(0);
+            $table->decimal('shipping_amount', 10, 2)->default(0);
+
             $table->decimal('total_amount', 10, 2);
 
             $table->enum('status', ['processing', 'shipped', 'delivered', 'returns', 'cancelled']);

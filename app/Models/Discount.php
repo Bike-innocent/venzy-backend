@@ -15,11 +15,44 @@ class Discount extends Model
     ];
 
 
-    public function isEligibleForCart($cartItems)
+    // public function isEligibleForCart($cartItems)
+    // {
+    //     $subtotal = $cartItems->sum(fn($item) => $item->quantity * $item->price);
+    //     $totalQuantity = $cartItems->sum('quantity');
+
+    //     // ✅ Usage limit check
+    //     if (!is_null($this->usage_limit) && $this->used_count >= $this->usage_limit) {
+    //         return false;
+    //     }
+
+    //     return match ($this->requirement_type) {
+    //         'none' => true,
+    //         'min_purchase_amount' => $subtotal >= $this->min_purchase_amount,
+    //         'min_quantity' => $totalQuantity >= $this->min_quantity,
+    //         default => false,
+    //     };
+    // }
+
+
+
+
+    public function isEligibleForCart($cartItems, $user = null)
     {
         $subtotal = $cartItems->sum(fn($item) => $item->quantity * $item->price);
         $totalQuantity = $cartItems->sum('quantity');
 
+        // Check global usage limit
+        if (!is_null($this->usage_limit) && $this->used_count >= $this->usage_limit) {
+            return false;
+        }
+
+        // Check per-user limit
+        if ($this->once_per_user && $user) {
+            $hasUsed = $this->users()->where('user_id', $user->id)->exists();
+            if ($hasUsed) return false;
+        }
+
+        // Check cart requirements
         return match ($this->requirement_type) {
             'none' => true,
             'min_purchase_amount' => $subtotal >= $this->min_purchase_amount,
@@ -27,6 +60,7 @@ class Discount extends Model
             default => false,
         };
     }
+
 
     public function estimatedValue($cartItems)
     {

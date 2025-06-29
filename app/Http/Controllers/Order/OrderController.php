@@ -483,152 +483,169 @@ class OrderController extends Controller
 
 
     public function checkout(Request $request)
-{
-    $user = $request->user();
+    {
+        $user = $request->user();
 
-    $validated = $request->validate([
-        'address_id' => 'required|exists:addresses,id',
-        'discount_code' => 'nullable|string'
-    ]);
+        $validated = $request->validate([
+            'address_id' => 'required|exists:addresses,id',
+            'discount_code' => 'nullable|string'
+        ]);
 
-    $address = \App\Models\Address::where('id', $validated['address_id'])
-        ->where('user_id', $user->id)
-        ->first();
-
-    if (!$address) {
-        return response()->json(['error' => 'Unauthorized address'], 403);
-    }
-
-    DB::beginTransaction();
-
-    try {
-        $cartItems = CartItem::with('product', 'variant')
+        $address = \App\Models\Address::where('id', $validated['address_id'])
             ->where('user_id', $user->id)
-            ->where('is_checked_out', false)
-            ->get();
+            ->first();
 
-        if ($cartItems->isEmpty()) {
-            return response()->json(['error' => 'Cart is empty'], 400);
+        if (!$address) {
+            return response()->json(['error' => 'Unauthorized address'], 403);
         }
 
-        $subtotal = $cartItems->sum(fn($item) => $item->quantity * $item->price);
-        $total = $subtotal;
-        $shippingPrice = 500;
+        DB::beginTransaction();
 
-        $discount = null;
-        $discountAmount = 0;
+        try {
+            $cartItems = CartItem::with('product', 'variant')
+                ->where('user_id', $user->id)
+                ->where('is_checked_out', false)
+                ->get();
 
-        if ($request->filled('discount_code')) {
-            $discount = Discount::where('code', $request->discount_code)
-                ->where('discount_method', 'code')
-                ->where('is_active', true)
-                ->where(function ($q) {
-                    $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
-                })
-                ->where(function ($q) {
-                    $q->whereNull('ends_at')->orWhere('ends_at', '>=', now());
-                })
-                ->first();
-
-            if (!$discount) {
-                return response()->json(['error' => 'Invalid or expired code'], 400);
+            if ($cartItems->isEmpty()) {
+                return response()->json(['error' => 'Cart is empty'], 400);
             }
 
-            if (!$discount->isEligibleForCart($cartItems)) {
-                return response()->json(['error' => 'You do not meet the discount requirement'], 400);
+            $subtotal = $cartItems->sum(fn($item) => $item->quantity * $item->price);
+            $total = $subtotal;
+            $shippingPrice = 500;
+
+            $discount = null;
+            $discountAmount = 0;
+
+
+
+
+
+            if ($request->filled('discount_code')) {
+                $discount = Discount::where('code', $request->discount_code)
+                    ->where('discount_method', 'code')
+                    ->where('is_active', true)
+                    ->where(function ($q) {
+                        $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
+                    })
+                    ->where(function ($q) {
+                        $q->whereNull('ends_at')->orWhere('ends_at', '>=', now());
+                    })
+                    ->first();
+
+                if (!$discount) {
+                    return response()->json(['error' => 'Invalid or expired code'], 400);
+                }
+
+                if (!$discount->isEligibleForCart($cartItems, $user)) {
+                    return response()->json(['error' => 'You do not meet the discount requirement'], 400);
+                }
+            } else {
+                $discount = Discount::where('discount_method', 'automatic')
+                    ->where('is_active', true)
+                    ->where(function ($q) {
+                        $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
+                    })
+                    ->where(function ($q) {
+                        $q->whereNull('ends_at')->orWhere('ends_at', '>=', now());
+                    })
+                    ->get()
+                    ->filter(fn($d) => $d->isEligibleForCart($cartItems, $user))
+                    ->sortByDesc(fn($d) => $d->estimatedValue($cartItems)) // You can implement this if needed
+                    ->first();
             }
-        } else {
-            $discount = Discount::where('discount_method', 'automatic')
-                ->where('is_active', true)
-                ->where(function ($q) {
-                    $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
-                })
-                ->where(function ($q) {
-                    $q->whereNull('ends_at')->orWhere('ends_at', '>=', now());
-                })
-                ->get()
-                ->filter(fn($d) => $d->isEligibleForCart($cartItems))
-                ->sortByDesc(fn($d) => $d->estimatedValue($cartItems)) // You can implement this if needed
-                ->first();
-        }
 
-        // Apply discount if present
-        if ($discount) {
-            if ($discount->discount_type === 'order') {
-                $discountAmount = $discount->value_type === 'percentage'
-                    ? round($subtotal * $discount->value / 100, 2)
-                    : round($discount->value, 2);
+            // Apply discount if present
+            if ($discount) {
+                if ($discount->discount_type === 'order') {
+                    $discountAmount = $discount->value_type === 'percentage'
+                        ? round($subtotal * $discount->value / 100, 2)
+                        : round($discount->value, 2);
 
-                $total -= $discountAmount;
-            }
+                    $total -= $discountAmount;
+                }
 
-            if ($discount->discount_type === 'shipping') {
-                $shippingDiscount = (!$discount->value_type && !$discount->value)
-                    ? $shippingPrice
-                    : (
-                        $discount->value_type === 'percentage'
+                if (!is_null($discount->usage_limit) && $discount->used_count >= $discount->usage_limit) {
+                    return response()->json(['error' => 'Discount usage limit reached'], 400);
+                }
+
+                if ($discount->discount_type === 'shipping') {
+                    $shippingDiscount = (!$discount->value_type && !$discount->value)
+                        ? $shippingPrice
+                        : (
+                            $discount->value_type === 'percentage'
                             ? round($shippingPrice * $discount->value / 100, 2)
                             : round($discount->value, 2)
-                    );
+                        );
 
-                $shippingDiscount = min($shippingPrice, $shippingDiscount);
-                $discountAmount = $shippingDiscount;
+                    $shippingDiscount = min($shippingPrice, $shippingDiscount);
+                    $discountAmount = $shippingDiscount;
 
-                $total = $subtotal + ($shippingPrice - $shippingDiscount);
+                    $total = $subtotal + ($shippingPrice - $shippingDiscount);
+                }
             }
-        }
 
-        // ✅ Stock check
-        foreach ($cartItems as $item) {
-            $variant = $item->variant;
-            $product = $item->product;
+            // ✅ Stock check
+            foreach ($cartItems as $item) {
+                $variant = $item->variant;
+                $product = $item->product;
 
-            $committed = ($variant ? $variant->orderItems() : $product->orderItems())
-                ->whereHas('order', fn($q) => $q->whereIn('status', ['processing', 'shipped']))
-                ->sum('quantity');
+                $committed = ($variant ? $variant->orderItems() : $product->orderItems())
+                    ->whereHas('order', fn($q) => $q->whereIn('status', ['processing', 'shipped']))
+                    ->sum('quantity');
 
-            $available = max(0, ($variant?->stock ?? $product->stock) - $committed);
+                $available = max(0, ($variant?->stock ?? $product->stock) - $committed);
 
-            if ($item->quantity > $available) {
-                throw new \Exception('Insufficient stock for: ' . $product->name);
+                if ($item->quantity > $available) {
+                    throw new \Exception('Insufficient stock for: ' . $product->name);
+                }
             }
-        }
 
-        // ✅ Create order
-        $order = Order::create([
-            'user_id' => $user->id,
-            'address_id' => $validated['address_id'],
-            'order_date' => now(),
-            'discount_id' => $discount?->id,
-            'discount_amount' => $discountAmount,
-            'total_amount' => $total,
-            'status' => 'processing',
-        ]);
-
-        foreach ($cartItems as $item) {
-            OrderItem::create([
-                'order_id' => $order->id,
-                'product_id' => $item->product_id,
-                'product_variant_id' => $item->product_variant_id,
-                'quantity' => $item->quantity,
-                'price' => $item->price,
+            // ✅ Create order
+            $order = Order::create([
+                'user_id' => $user->id,
+                'address_id' => $validated['address_id'],
+                'order_date' => now(),
+                'discount_id' => $discount?->id,
+                'discount_amount' => $discountAmount,
+                'shipping_amount' => $shippingPrice,
+                'total_amount' => $total,
+                'status' => 'processing',
             ]);
 
-            $item->is_checked_out = true;
-            $item->save();
+            if ($discount) {
+                // Log user usage
+                $discount->users()->attach($user->id); // discount_user table
+
+                // Increment usage count
+                $discount->increment('used_count');
+            }
+
+            foreach ($cartItems as $item) {
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'product_id' => $item->product_id,
+                    'product_variant_id' => $item->product_variant_id,
+                    'quantity' => $item->quantity,
+                    'price' => $item->price,
+                ]);
+
+                $item->is_checked_out = true;
+                $item->save();
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Order placed successfully',
+                'order_id' => $order->id
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => $e->getMessage()], 500);
         }
-
-        DB::commit();
-
-        return response()->json([
-            'message' => 'Order placed successfully',
-            'order_id' => $order->id
-        ]);
-    } catch (\Exception $e) {
-        DB::rollBack();
-        return response()->json(['error' => $e->getMessage()], 500);
     }
-}
 
 
 

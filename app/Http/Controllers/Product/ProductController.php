@@ -13,6 +13,7 @@ use App\Http\Controllers\Controller;
 use App\Models\OrderItem;
 use App\Models\ProductVariant;
 use App\Models\ProductVariantValue;
+use App\Models\Setting;
 use App\Models\VariantOption;
 use Illuminate\Support\Str;
 
@@ -663,82 +664,84 @@ class ProductController extends Controller
 
 
 
-public function show($slug)
-{
-    $product = Product::with([
-        'category',
-        'brand',
-        'images',
-        'variants.variantValues.variantOptionValue.variantOption',
-    ])->where('slug', $slug)->firstOrFail();
+    public function show($slug)
+    {
+        $product = Product::with([
+            'category',
+            'brand',
+            'images',
+            'variants.variantValues.variantOptionValue.variantOption',
+        ])->where('slug', $slug)->firstOrFail();
 
-    // Format image paths
-    $product->images = $product->images->map(function ($image) {
-        $image->image_path = url('product-images/' . $image->image_path);
-        return $image;
-    });
+        // Format image paths
+        $product->images = $product->images->map(function ($image) {
+            $image->image_path = url('product-images/' . $image->image_path);
+            return $image;
+        });
 
-    // Handle variants
-    $product->variants = $product->variants->map(function ($variant) {
-        $attributes = [];
+        // Handle variants
+        $product->variants = $product->variants->map(function ($variant) {
+            $attributes = [];
 
-        foreach ($variant->variantValues as $vv) {
-            $optionValue = $vv->variantOptionValue;
-            $option = $optionValue?->option;
+            foreach ($variant->variantValues as $vv) {
+                $optionValue = $vv->variantOptionValue;
+                $option = $optionValue?->option;
 
-            if ($option && $optionValue) {
-                $attributes[$option->name] = $optionValue->value;
+                if ($option && $optionValue) {
+                    $attributes[$option->name] = $optionValue->value;
+                }
             }
+
+            // Calculate committed quantity for this variant
+            $committed = OrderItem::where('product_variant_id', $variant->id)
+                ->whereHas('order', function ($q) {
+                    $q->whereIn('status', ['processing', 'shipped']);
+                })
+                ->sum('quantity');
+
+            $onHand = $variant->stock;
+            $available = max(0, $onHand - $committed);
+
+            $variant->attributes = $attributes;
+            $variant->available_stock = $available;
+            unset($variant->variantValues);
+
+            return $variant;
+        });
+
+        // ✅ If no variants, calculate available_stock for the simple product
+        if ($product->variants->isEmpty()) {
+            $committed = OrderItem::where('product_id', $product->id)
+                ->whereNull('product_variant_id') // Only non-variant orders
+                ->whereHas('order', function ($q) {
+                    $q->whereIn('status', ['processing', 'shipped']);
+                })
+                ->sum('quantity');
+
+            $onHand = $product->stock;
+            $available = max(0, $onHand - $committed);
+            $product->available_stock = $available; // ✅ Add to response
         }
 
-        // Calculate committed quantity for this variant
-        $committed = OrderItem::where('product_variant_id', $variant->id)
-            ->whereHas('order', function ($q) {
-                $q->whereIn('status', ['processing', 'shipped']);
-            })
-            ->sum('quantity');
+        // Get variant options used by this product
+        $variantOptionIds = $product->productVariantOptions()->pluck('variant_option_id');
 
-        $onHand = $variant->stock;
-        $available = max(0, $onHand - $committed);
+        $usedValueIds = DB::table('product_variant_values')
+            ->join('product_variants', 'product_variant_values.product_variant_id', '=', 'product_variants.id')
+            ->where('product_variants.product_id', $product->id)
+            ->pluck('variant_option_value_id')
+            ->unique();
 
-        $variant->attributes = $attributes;
-        $variant->available_stock = $available;
-        unset($variant->variantValues);
+        $variantOptions = \App\Models\VariantOption::with(['values' => function ($query) use ($usedValueIds) {
+            $query->whereIn('id', $usedValueIds);
+        }])->whereIn('id', $variantOptionIds)->get();
 
-        return $variant;
-    });
+        $product->setRelation('variant_options', $variantOptions);
 
-    // ✅ If no variants, calculate available_stock for the simple product
-    if ($product->variants->isEmpty()) {
-        $committed = OrderItem::where('product_id', $product->id)
-            ->whereNull('product_variant_id') // Only non-variant orders
-            ->whereHas('order', function ($q) {
-                $q->whereIn('status', ['processing', 'shipped']);
-            })
-            ->sum('quantity');
+      
 
-        $onHand = $product->stock;
-        $available = max(0, $onHand - $committed);
-        $product->available_stock = $available; // ✅ Add to response
+        return response()->json($product);
     }
-
-    // Get variant options used by this product
-    $variantOptionIds = $product->productVariantOptions()->pluck('variant_option_id');
-
-    $usedValueIds = DB::table('product_variant_values')
-        ->join('product_variants', 'product_variant_values.product_variant_id', '=', 'product_variants.id')
-        ->where('product_variants.product_id', $product->id)
-        ->pluck('variant_option_value_id')
-        ->unique();
-
-    $variantOptions = \App\Models\VariantOption::with(['values' => function ($query) use ($usedValueIds) {
-        $query->whereIn('id', $usedValueIds);
-    }])->whereIn('id', $variantOptionIds)->get();
-
-    $product->setRelation('variant_options', $variantOptions);
-
-    return response()->json($product);
-}
 
 
 
