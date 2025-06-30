@@ -17,7 +17,12 @@ class AdminSeeder extends Seeder
     public function run()
     {
         // Create the admin role if it doesn't exist
-        $adminRole = Role::firstOrCreate(['name' => 'admin']);
+        // $adminRole = Role::firstOrCreate(['name' => 'admin']);
+
+         $adminRole = Role::firstOrCreate([
+            'name' => 'admin',
+           'guard_name' => 'web'
+        ]);
 
         // Find the user by their email
          //$adminEmail = 'onyemaobichibuikeinnocent.com@gmail.com';

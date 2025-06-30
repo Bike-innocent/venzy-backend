@@ -259,6 +259,9 @@ use App\Http\Controllers\Order\AdminOrderController;
 
 use App\Http\Controllers\Customer\AdminCustomerController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Role\AdminUserRoleController;
+use App\Http\Controllers\Role\PermissionController;
+use App\Http\Controllers\Role\RoleController;
 use App\Http\Controllers\Setting\SettingController;
 
 // -----------------------------
@@ -379,11 +382,30 @@ Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
 
     // Dashboard Summary
     Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
+
+
+    //Roles and Permissions
+    Route::get('/roles', [RoleController::class, 'index']);
+    Route::get('/roles/{id}', [RoleController::class, 'show']);
+    Route::post('/roles', [RoleController::class, 'store']);
+    Route::put('/roles/{id}', [RoleController::class, 'update']);
+    Route::delete('/roles/{id}', [RoleController::class, 'destroy']);
+    // Route::get('/roles/{id}/permissions', [RoleController::class, 'permissions']);
+    // Route::post('/roles/{id}/permissions', [RoleController::class, 'assignPermissions']);
+
+    Route::get('/permissions', [PermissionController::class, 'index']);
+
+
+
+    Route::get('/users-with-roles', [AdminUserRoleController::class, 'index']);
+    Route::get('/users/{id}/roles', [AdminUserRoleController::class, 'showRoles']);
+    Route::post('/users/{id}/roles', [AdminUserRoleController::class, 'assignRoles']);
+    Route::delete('/users/{id}/roles/{role}', [AdminUserRoleController::class, 'revokeRole']);
 });
 
 
 // -----------------------------
-// ✅ GENERAL / MISC
+// ✅ test routes
 // -----------------------------
 
 Route::get('/users', [UserController::class, 'index']);

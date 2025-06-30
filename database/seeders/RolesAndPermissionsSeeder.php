@@ -1,6 +1,92 @@
 <?php
 
 
+// namespace Database\Seeders;
+
+// use Illuminate\Database\Seeder;
+// use Spatie\Permission\Models\Role;
+// use Spatie\Permission\Models\Permission;
+
+// class RolesAndPermissionsSeeder extends Seeder
+// {
+//     public function run()
+//     {
+
+
+
+//         $permissions = [
+//             // Orders
+//             'orders.view',
+//             'orders.create',
+//             'orders.update',
+//             'orders.cancel',
+//             'orders.delete',
+
+//             // Products
+//             'products.view',
+//             'products.create',
+//             'products.update',
+//             'products.delete',
+
+//             // Users
+//             'users.view',
+//             'users.create',
+//             'users.update',
+//             'users.delete',
+
+//             // Roles
+//             'roles.create',
+//             'roles.assign',
+//             'roles.revoke',
+//             'roles.view',
+
+//             // Discounts
+//             'discounts.view',
+//             'discounts.create',
+//             'discounts.update',
+//             'discounts.delete',
+
+//             // Inventory
+//             'inventory.view',
+//             'inventory.update',
+//         ];
+
+
+//         foreach ($permissions as $permission) {
+//             Permission::firstOrCreate([
+//                 'name' => $permission,
+//                 'guard_name' => 'web' // ✅ Ensure it's for sanctum guard
+//             ]);
+//         }
+
+    
+//         $adminRole = Role::firstOrCreate([
+//             'name' => 'admin',
+//            'guard_name' => 'web' // ✅ Also important for roles
+//         ]);
+//         $adminRole->givePermissionTo(Permission::all());
+
+
+//         $this->command->info('Roles and permissions seeded successfully.');
+//     }
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
@@ -11,32 +97,39 @@ class RolesAndPermissionsSeeder extends Seeder
 {
     public function run()
     {
-        // Reset cached roles and permissions
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        // Define permission groups with CRUD-style structure
+        $modules = [
+            'orders' => ['view', 'create', 'update', 'cancel', 'delete'],
+            'products' => ['view', 'create', 'update', 'delete'],
+            'users' => ['view', 'create', 'update', 'delete'],
+            'roles' => ['view', 'create', 'assign', 'revoke'],
+            'discounts' => ['view', 'create', 'update', 'delete'],
+            'inventory' => ['view', 'update'],
+            // Optional future modules:
+            // 'categories' => ['view', 'create', 'update', 'delete'],
+            // 'brands' => ['view', 'create', 'update', 'delete'],
+            // 'settings' => ['view', 'update'],
+        ];
 
-        // Create permissions
-        Permission::create(['name' => 'create roles']);
-        Permission::create(['name' => 'assign role']);
-        Permission::create(['name' => 'revoke role']);
+        // Seed all permissions
+        foreach ($modules as $module => $actions) {
+            foreach ($actions as $action) {
+                $permissionName = "{$module}.{$action}";
+                Permission::firstOrCreate([
+                    'name' => $permissionName,
+                    'guard_name' => 'web',
+                ]);
+            }
+        }
 
-        // Additional supplier-related permissions
-        Permission::create(['name' => 'manage supplier orders']);
-        Permission::create(['name' => 'view supplier orders']);
-        Permission::create(['name' => 'create supplier products']);
-        Permission::create(['name' => 'update supplier products']);
-        Permission::create(['name' => 'delete supplier products']);
+        // Create admin role and assign all permissions
+        $adminRole = Role::firstOrCreate([
+            'name' => 'admin',
+            'guard_name' => 'web',
+        ]);
 
-        // Create roles and assign created permissions
+        $adminRole->syncPermissions(Permission::all());
 
-        // Supplier role
-        $supplierRole = Role::create(['name' => 'supplier']);
-        $supplierRole->givePermissionTo(['manage supplier orders', 'view supplier orders', 'create supplier products', 'update supplier products', 'delete supplier products']);
-
-        // Admin role
-        $adminRole = Role::create(['name' => 'admin']);
-        $adminRole->givePermissionTo(Permission::all());
-
-       
         $this->command->info('Roles and permissions seeded successfully.');
     }
 }
