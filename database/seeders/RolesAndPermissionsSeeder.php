@@ -59,7 +59,7 @@
 //             ]);
 //         }
 
-    
+
 //         $adminRole = Role::firstOrCreate([
 //             'name' => 'admin',
 //            'guard_name' => 'web' // ✅ Also important for roles
@@ -76,7 +76,10 @@
 
 
 
-
+// Optional future modules:
+// 'categories' => ['view', 'create', 'update', 'delete'],
+// 'brands' => ['view', 'create', 'update', 'delete'],
+// 'settings' => ['view', 'update'],
 
 
 
@@ -99,16 +102,15 @@ class RolesAndPermissionsSeeder extends Seeder
     {
         // Define permission groups with CRUD-style structure
         $modules = [
+            'dashboard' => ['view', 'orders', 'products', 'customers', 'revenue'],
             'orders' => ['view', 'create', 'update', 'cancel', 'delete'],
             'products' => ['view', 'create', 'update', 'delete'],
             'users' => ['view', 'create', 'update', 'delete'],
-            'roles' => ['view', 'create', 'assign', 'revoke'],
+            'roles' => ['view', 'create', 'assign', 'revoke', 'update', 'delete'],
             'discounts' => ['view', 'create', 'update', 'delete'],
             'inventory' => ['view', 'update'],
-            // Optional future modules:
-            // 'categories' => ['view', 'create', 'update', 'delete'],
-            // 'brands' => ['view', 'create', 'update', 'delete'],
-            // 'settings' => ['view', 'update'],
+
+
         ];
 
         // Seed all permissions

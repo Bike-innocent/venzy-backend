@@ -351,57 +351,151 @@ Route::middleware('auth:sanctum')->group(function () {
 // ✅ ADMIN ROUTES
 // -----------------------------
 
-Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
 
-    //products
-    Route::post('/products', [ProductController::class, 'store']);
-    Route::put('/products/{product}', [ProductController::class, 'update']);
-    Route::delete('/products/{slug}', [ProductController::class, 'destroy']);
 
+
+
+
+
+
+
+Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
+
+    // Products
+    Route::get('/products', [ProductController::class, 'index'])->middleware('permission:products.view');
+    Route::post('/products', [ProductController::class, 'store'])->middleware('permission:products.create');
+    // Route::put('/products/{product}', [ProductController::class, 'update'])->middleware('permission:products.update');
+
+
+
+    Route::put('/products/{product}', [ProductController::class, 'update'])
+        ->withoutScopedBindings()
+        ->middleware('permission:products.update');
+
+    Route::delete('/products/{slug}', [ProductController::class, 'destroy'])->middleware('permission:products.delete');
 
     // Customers
-    Route::get('/customers', [AdminCustomerController::class, 'index']);
-    Route::get('/customers/{id}', [AdminCustomerController::class, 'show']);
+    Route::get('/customers', [AdminCustomerController::class, 'index'])->middleware('permission:users.view');
+    Route::get('/customers/{id}', [AdminCustomerController::class, 'show'])->middleware('permission:users.view');
 
     // Orders
-    Route::get('/orders', [AdminOrderController::class, 'index']);
-    Route::get('/orders/{id}', [AdminOrderController::class, 'show']);
-    Route::patch('/orders/{id}/status', [AdminOrderController::class, 'updateStatus']);
-    Route::delete('/orders/{id}/cancel', [AdminOrderController::class, 'adminCancel']);
+    Route::get('/orders', [AdminOrderController::class, 'index'])->middleware('permission:orders.view');
+    Route::get('/orders/{id}', [AdminOrderController::class, 'show'])->middleware('permission:orders.view');
+    Route::patch('/orders/{id}/status', [AdminOrderController::class, 'updateStatus'])->middleware('permission:orders.update');
+    Route::delete('/orders/{id}/cancel', [AdminOrderController::class, 'adminCancel'])->middleware('permission:orders.cancel');
 
     // Discounts
-    Route::get('/discounts', [DiscountController::class, 'index']);
-    Route::post('/discounts', [DiscountController::class, 'store']);
-    Route::get('/discounts/{id}', [DiscountController::class, 'show']);
-    Route::put('/discounts/{id}', [DiscountController::class, 'update']);
-    Route::delete('/discounts/{id}', [DiscountController::class, 'destroy']);
+    Route::get('/discounts', [DiscountController::class, 'index'])->middleware('permission:discounts.view');
+    Route::post('/discounts', [DiscountController::class, 'store'])->middleware('permission:discounts.create');
+    Route::get('/discounts/{id}', [DiscountController::class, 'show'])->middleware('permission:discounts.view');
+    Route::put('/discounts/{id}', [DiscountController::class, 'update'])->middleware('permission:discounts.update');
+    Route::delete('/discounts/{id}', [DiscountController::class, 'destroy'])->middleware('permission:discounts.delete');
 
     // Inventory
-    Route::get('/inventory', [InventoryController::class, 'index']);
-    Route::patch('/inventory/update-stock/{type}/{id}', [InventoryController::class, 'updateStock']);
+    Route::get('/inventory', [InventoryController::class, 'index'])->middleware('permission:inventory.view');
+    Route::patch('/inventory/update-stock/{type}/{id}', [InventoryController::class, 'updateStock'])->middleware('permission:inventory.update');
 
-    // Dashboard Summary
-    Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
+    // Dashboard
+    Route::get('/dashboard/summary', [DashboardController::class, 'summary'])
+        ->middleware('permission:dashboard.view');
+    // Roles & Permissions
+    Route::get('/roles', [RoleController::class, 'index'])->middleware('permission:roles.view');
+    Route::get('/roles/{id}', [RoleController::class, 'show'])->middleware('permission:roles.view');
+    Route::post('/roles', [RoleController::class, 'store'])->middleware('permission:roles.create');
+    Route::put('/roles/{id}', [RoleController::class, 'update'])->middleware('permission:roles.update');
+    Route::delete('/roles/{id}', [RoleController::class, 'destroy'])->middleware('permission:roles.delete');
 
+    Route::get('/permissions', [PermissionController::class, 'index'])->middleware('permission:roles.view');
 
-    //Roles and Permissions
-    Route::get('/roles', [RoleController::class, 'index']);
-    Route::get('/roles/{id}', [RoleController::class, 'show']);
-    Route::post('/roles', [RoleController::class, 'store']);
-    Route::put('/roles/{id}', [RoleController::class, 'update']);
-    Route::delete('/roles/{id}', [RoleController::class, 'destroy']);
-    // Route::get('/roles/{id}/permissions', [RoleController::class, 'permissions']);
-    // Route::post('/roles/{id}/permissions', [RoleController::class, 'assignPermissions']);
-
-    Route::get('/permissions', [PermissionController::class, 'index']);
-
-
-
-    Route::get('/users-with-roles', [AdminUserRoleController::class, 'index']);
-    Route::get('/users/{id}/roles', [AdminUserRoleController::class, 'showRoles']);
-    Route::post('/users/{id}/roles', [AdminUserRoleController::class, 'assignRoles']);
-    Route::delete('/users/{id}/roles/{role}', [AdminUserRoleController::class, 'revokeRole']);
+    // Role Assignment
+    Route::get('/users-with-roles', [AdminUserRoleController::class, 'index'])->middleware('permission:roles.view');
+    Route::get('/users/{id}/roles', [AdminUserRoleController::class, 'showRoles'])->middleware('permission:roles.view');
+    Route::post('/users/{id}/roles', [AdminUserRoleController::class, 'assignRoles'])->middleware('permission:roles.assign');
+    Route::delete('/users/{id}/roles/{role}', [AdminUserRoleController::class, 'revokeRole'])->middleware('permission:roles.revoke');
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
+
+//     //products
+//     Route::post('/products', [ProductController::class, 'store']);
+//     Route::put('/products/{product}', [ProductController::class, 'update']);
+//     Route::delete('/products/{slug}', [ProductController::class, 'destroy']);
+
+
+//     // Customers
+//     Route::get('/customers', [AdminCustomerController::class, 'index']);
+//     Route::get('/customers/{id}', [AdminCustomerController::class, 'show']);
+
+//     // Orders
+//     Route::get('/orders', [AdminOrderController::class, 'index']);
+//     Route::get('/orders/{id}', [AdminOrderController::class, 'show']);
+//     Route::patch('/orders/{id}/status', [AdminOrderController::class, 'updateStatus']);
+//     Route::delete('/orders/{id}/cancel', [AdminOrderController::class, 'adminCancel']);
+
+//     // Discounts
+//     Route::get('/discounts', [DiscountController::class, 'index']);
+//     Route::post('/discounts', [DiscountController::class, 'store']);
+//     Route::get('/discounts/{id}', [DiscountController::class, 'show']);
+//     Route::put('/discounts/{id}', [DiscountController::class, 'update']);
+//     Route::delete('/discounts/{id}', [DiscountController::class, 'destroy']);
+
+//     // Inventory
+//     Route::get('/inventory', [InventoryController::class, 'index']);
+//     Route::patch('/inventory/update-stock/{type}/{id}', [InventoryController::class, 'updateStock']);
+
+//     // Dashboard Summary
+//     Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
+
+
+//     //Roles and Permissions
+//     Route::get('/roles', [RoleController::class, 'index']);
+//     Route::get('/roles/{id}', [RoleController::class, 'show']);
+//     Route::post('/roles', [RoleController::class, 'store']);
+//     Route::put('/roles/{id}', [RoleController::class, 'update']);
+//     Route::delete('/roles/{id}', [RoleController::class, 'destroy']);
+//     // Route::get('/roles/{id}/permissions', [RoleController::class, 'permissions']);
+//     // Route::post('/roles/{id}/permissions', [RoleController::class, 'assignPermissions']);
+
+//     Route::get('/permissions', [PermissionController::class, 'index']);
+
+
+
+//     Route::get('/users-with-roles', [AdminUserRoleController::class, 'index']);
+//     Route::get('/users/{id}/roles', [AdminUserRoleController::class, 'showRoles']);
+//     Route::post('/users/{id}/roles', [AdminUserRoleController::class, 'assignRoles']);
+//     Route::delete('/users/{id}/roles/{role}', [AdminUserRoleController::class, 'revokeRole']);
+// });
 
 
 // -----------------------------

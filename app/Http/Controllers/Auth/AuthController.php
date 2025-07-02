@@ -10,6 +10,8 @@ use App\Models\CartItem;
 use Illuminate\Support\Facades\Hash;
 use App\Mail\WelcomeEmail;
 use Illuminate\Support\Facades\Log;
+use Spatie\Permission\Models\Permission;
+
 use Illuminate\Support\Facades\Mail;
 // use Laravel\Sanctum\HasApiTokens;
 // use Laravel\Sanctum\PersonalAccessToken;
@@ -53,6 +55,14 @@ class AuthController extends Controller
     }
 
 
+    
+
+
+
+
+
+
+
     public function login(Request $request)
     {
         $credentials = $request->validate([
@@ -65,14 +75,27 @@ class AuthController extends Controller
         }
 
         $user = Auth::user();
-        $user->load('roles', 'permissions');
+        $user->load('roles');
+
+        // Get flattened permissions (from roles + direct)
+        $permissions = $user->getAllPermissions()->pluck('name')->toArray();
+
+        // Return only minimal role info (name)
+        $roles = $user->roles->pluck('name')->toArray();
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        // Merge guest cart
+        // Merge guest cart logic
         $this->mergeGuestCart($request);
 
         return response()->json([
-            'user' => $user,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'roles' => $roles,
+                'permissions' => $permissions,
+            ],
             'access_token' => $token,
             'token_type' => 'Bearer',
             'cart_count' => CartItem::where('user_id', $user->id)
@@ -80,7 +103,6 @@ class AuthController extends Controller
                 ->sum('quantity'),
         ], 201);
     }
-
 
 
     protected function mergeGuestCart(Request $request)
