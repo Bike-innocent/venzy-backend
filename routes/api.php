@@ -259,6 +259,7 @@ use App\Http\Controllers\Order\AdminOrderController;
 
 use App\Http\Controllers\Customer\AdminCustomerController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Contact\ContactMessageController;
 use App\Http\Controllers\Role\AdminUserRoleController;
 use App\Http\Controllers\Role\PermissionController;
 use App\Http\Controllers\Role\RoleController;
@@ -276,7 +277,9 @@ Route::get('/sanctum/csrf-cookie', [CsrfCookieController::class, 'show']);
 // Route::get('/settings/currency', [SettingController::class, 'currency']);
 
 
-Route::post('/contact', [ContactController::class, 'sendContactMessage']);
+// Route::post('/contact', [ContactController::class, 'sendContactMessage']);
+Route::post('/contact-message', [ContactMessageController::class, 'store']);
+
 
 Route::get('/settings', [SettingController::class, 'index']);
 Route::get('/settings/{slug}', [SettingController::class, 'show']);

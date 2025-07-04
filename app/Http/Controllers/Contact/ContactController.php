@@ -77,3 +77,26 @@ class ContactController extends Controller
         return response()->json(['message' => 'Message sent successfully!'], 200);
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ok nice i want us to handle the static frontend pages logic with  backend here is it Contact Messages,Faq so we will start with contact messages so guest or customer can message us if is guest it will require subject,email and message if is user or customer it will require subject and message so lets thesign the backend first and also we can add an email logic to send message to admin or user permitted roles so lets do it well then after will can display it on frontend too
