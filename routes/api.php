@@ -259,6 +259,7 @@ use App\Http\Controllers\Order\AdminOrderController;
 
 use App\Http\Controllers\Customer\AdminCustomerController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\FaqController;
 use App\Http\Controllers\Contact\ContactMessageController;
 use App\Http\Controllers\Role\AdminUserRoleController;
 use App\Http\Controllers\Role\PermissionController;
@@ -274,16 +275,10 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail']);
 Route::post('/reset-password', [ResetPasswordController::class, 'reset']);
 Route::get('/sanctum/csrf-cookie', [CsrfCookieController::class, 'show']);
-// Route::get('/settings/currency', [SettingController::class, 'currency']);
-
-
-// Route::post('/contact', [ContactController::class, 'sendContactMessage']);
 Route::post('/contact-message', [ContactMessageController::class, 'store']);
-
-
+Route::get('/faqs', [FaqController::class, 'publicIndex']); // frontend
+Route::get('/faqs/has-any', [FaqController::class, 'hasAny']);
 Route::get('/settings', [SettingController::class, 'index']);
-Route::get('/settings/{slug}', [SettingController::class, 'show']);
-Route::put('/settings/{slug}', [SettingController::class, 'update'])->middleware('permission:settings.update');
 
 
 
@@ -429,13 +424,20 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
 
     //settings
 
- 
+
 
     Route::get('/settings', [SettingController::class, 'index'])->middleware('permission:settings.view');
-
     Route::get('/settings/{slug}', [SettingController::class, 'show'])->middleware('permission:settings.view');
-
     Route::put('/settings/{slug}', [SettingController::class, 'update'])->middleware('permission:settings.update');
+
+  
+    Route::get('/faqs', [FaqController::class, 'index'])->middleware('permission:faqs.view');
+     Route::get('/faqs/{faq}', [FaqController::class, 'show'])->middleware('permission:faqs.view');
+    Route::post('/faqs', [FaqController::class, 'store'])->middleware('permission:faqs.create');
+    Route::put('/faqs/{faq}', [FaqController::class, 'update'])->middleware('permission:faqs.update');
+   
+    Route::delete('/faqs/{faq}', [FaqController::class, 'destroy'])->middleware('permission:faqs.delete');
+    Route::patch('/faqs/{faq}/toggle', [FaqController::class, 'toggle'])->middleware('permission:faqs.update');
 });
 
 

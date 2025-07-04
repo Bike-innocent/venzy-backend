@@ -25,7 +25,7 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             BrandsTableSeeder::class,
 
-           VariantOptionsTableSeeder::class,
+            VariantOptionsTableSeeder::class,
             ProductsTableSeeder::class,
 
             OrderSeeder::class,
@@ -34,17 +34,12 @@ class DatabaseSeeder extends Seeder
 
 
             SettingSeeder::class,
-
+            FaqSeeder::class,
 
 
 
 
             // PaymentSeeder::class,
-
-
-
-
-
 
         ]);
     }

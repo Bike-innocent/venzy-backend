@@ -8,7 +8,4 @@
 **Message:**
 
 {{ $messageData->message }}
-{{-- 
-Thanks,<br>
-{{ config('app.name') }} --}}
 @endcomponent
