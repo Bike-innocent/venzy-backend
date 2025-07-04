@@ -273,10 +273,20 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail']);
 Route::post('/reset-password', [ResetPasswordController::class, 'reset']);
 Route::get('/sanctum/csrf-cookie', [CsrfCookieController::class, 'show']);
-Route::get('/settings/currency', [SettingController::class, 'currency']);
+// Route::get('/settings/currency', [SettingController::class, 'currency']);
 
 
 Route::post('/contact', [ContactController::class, 'sendContactMessage']);
+
+Route::get('/settings', [SettingController::class, 'index']);
+Route::get('/settings/{slug}', [SettingController::class, 'show']);
+Route::put('/settings/{slug}', [SettingController::class, 'update'])->middleware('permission:settings.update');
+
+
+
+
+
+
 
 
 // -----------------------------
@@ -320,6 +330,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Auth
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/refresh-user', [AuthController::class, 'refreshUser']);
 
     // Profile
     Route::get('/user/profile', [ProfileController::class, 'index']);
@@ -412,6 +423,16 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
     Route::get('/users/{id}/roles', [AdminUserRoleController::class, 'showRoles'])->middleware('permission:roles.view');
     Route::post('/users/{id}/roles', [AdminUserRoleController::class, 'assignRoles'])->middleware('permission:roles.assign');
     Route::delete('/users/{id}/roles/{role}', [AdminUserRoleController::class, 'revokeRole'])->middleware('permission:roles.revoke');
+
+    //settings
+
+ 
+
+    Route::get('/settings', [SettingController::class, 'index'])->middleware('permission:settings.view');
+
+    Route::get('/settings/{slug}', [SettingController::class, 'show'])->middleware('permission:settings.view');
+
+    Route::put('/settings/{slug}', [SettingController::class, 'update'])->middleware('permission:settings.update');
 });
 
 

@@ -109,6 +109,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'roles' => ['view', 'create', 'assign', 'revoke', 'update', 'delete'],
             'discounts' => ['view', 'create', 'update', 'delete'],
             'inventory' => ['view', 'update'],
+            'settings' => ['view', 'update','general','shipping','social','pages'],
 
 
         ];

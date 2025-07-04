@@ -33,20 +33,13 @@ class DatabaseSeeder extends Seeder
             ProductImageSeeder::class,
 
 
-
-
-
-
-
-
+            SettingSeeder::class,
 
 
 
 
 
             // PaymentSeeder::class,
-
-
 
 
 

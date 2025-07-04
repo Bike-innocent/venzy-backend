@@ -5,12 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Setting extends Model
+class SettingGroup extends Model
 {
     use HasFactory;
     protected $guarded = [];
-    public function group()
+
+    public function settings()
     {
-        return $this->belongsTo(SettingGroup::class);
+        return $this->hasMany(Setting::class);
     }
 }

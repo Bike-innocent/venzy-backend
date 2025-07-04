@@ -51,6 +51,42 @@ class EmailUpdateController extends Controller
      */
 
 
+    // public function verifyChange($token)
+    // {
+    //     $pending = DB::table('pending_user_emails')->where('token', $token)->first();
+
+    //     if (!$pending || now()->greaterThan($pending->expires_at)) {
+    //         return redirect(config('app.frontend_url') . '/account/profile?status=error&message=Invalid or expired verification token.');
+    //     }
+
+    //     $user = User::find($pending->user_id);
+    //     if (!$user) {
+    //         return redirect(config('app.frontend_url') . '/account/profile?status=error&message=User not found.');
+    //     }
+
+    //     // Update the user's email
+    //     $user->email = $pending->new_email;
+    //     $user->email_verified_at = now();
+    //     $user->save();
+
+    //     // Clean up
+    //     DB::table('pending_user_emails')->where('id', $pending->id)->delete();
+
+    //     // Auto-login: generate token
+    //     $user->load('roles', 'permissions'); // Optional if you need in frontend
+    //     $token = $user->createToken('auth_token')->plainTextToken;
+
+    //     // Redirect to frontend with token
+    //     return redirect(config('app.frontend_url') . '/auth/callback?token=' . $token);
+    // }
+
+
+
+
+
+
+
+
     public function verifyChange($token)
     {
         $pending = DB::table('pending_user_emails')->where('token', $token)->first();
@@ -64,19 +100,25 @@ class EmailUpdateController extends Controller
             return redirect(config('app.frontend_url') . '/account/profile?status=error&message=User not found.');
         }
 
-        // Update the user's email
+        $wasAdmin = $user->hasRole('admin');
+
+        // Update email
         $user->email = $pending->new_email;
         $user->email_verified_at = now();
         $user->save();
 
+        // Restore admin role if needed
+        if ($wasAdmin && !$user->hasRole('admin')) {
+            $user->assignRole('admin');
+        }
+
         // Clean up
         DB::table('pending_user_emails')->where('id', $pending->id)->delete();
 
-        // Auto-login: generate token
-        $user->load('roles', 'permissions'); // Optional if you need in frontend
+        // Regenerate token
+        $user->load('roles', 'permissions');
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        // Redirect to frontend with token
         return redirect(config('app.frontend_url') . '/auth/callback?token=' . $token);
     }
 }

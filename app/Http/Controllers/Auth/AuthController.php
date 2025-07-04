@@ -55,7 +55,7 @@ class AuthController extends Controller
     }
 
 
-    
+
 
 
 
@@ -134,6 +134,27 @@ class AuthController extends Controller
                 $item->save();
             }
         }
+    }
+
+
+
+
+
+
+
+    public function refreshUser(Request $request)
+    {
+        $user = $request->user()->load('roles');
+        $permissions = $user->getAllPermissions()->pluck('name')->toArray();
+        $roles = $user->roles->pluck('name')->toArray();
+
+        return response()->json([
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'roles' => $roles,
+            'permissions' => $permissions,
+        ]);
     }
 
 
