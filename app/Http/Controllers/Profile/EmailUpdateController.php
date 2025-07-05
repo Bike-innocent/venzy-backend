@@ -116,7 +116,6 @@ class EmailUpdateController extends Controller
         DB::table('pending_user_emails')->where('id', $pending->id)->delete();
 
         // Regenerate token
-        $user->load('roles', 'permissions');
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return redirect(config('app.frontend_url') . '/auth/callback?token=' . $token);

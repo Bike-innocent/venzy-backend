@@ -93,6 +93,8 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'phone' => $user->phone,
+                'dial_code' => $user->dial_code,
                 'roles' => $roles,
                 'permissions' => $permissions,
             ],
@@ -153,6 +155,8 @@ class AuthController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'roles' => $roles,
+            'phone' => $user->phone,
+            'dial_code' => $user->dial_code,
             'permissions' => $permissions,
         ]);
     }
