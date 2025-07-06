@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
+
 class DashboardController extends Controller
 {
     public function summary()
@@ -31,29 +32,127 @@ class DashboardController extends Controller
 
 
 
-    public function salesChart()
+    // public function salesChart()
+    // {
+    //     $startDate = Carbon::now()->subDays(30); // last 30 days
+
+    //     $sales = DB::table('orders')
+    //         ->selectRaw('DATE(order_date) as date, SUM(total_amount) as total_sales')
+    //         ->where('status', '!=', 'cancelled') // ignore cancelled orders
+    //         ->whereDate('order_date', '>=', $startDate)
+    //         ->groupBy(DB::raw('DATE(order_date)'))
+    //         ->orderBy('date')
+    //         ->get();
+
+    //     // Format for frontend charting library: labels + data
+    //     $formatted = [
+    //         'labels' => $sales->pluck('date'),
+    //         'data' => $sales->pluck('total_sales'),
+    //     ];
+
+    //     return response()->json($formatted);
+    // }
+
+
+    public function salesChart(Request $request)
     {
-        $startDate = Carbon::now()->subDays(30); // last 30 days
+        $range = $request->query('range', 'month'); // default to 'month'
 
-        $sales = DB::table('orders')
-            ->selectRaw('DATE(order_date) as date, SUM(total_amount) as total_sales')
-            ->where('status', '!=', 'cancelled') // ignore cancelled orders
-            ->whereDate('order_date', '>=', $startDate)
-            ->groupBy(DB::raw('DATE(order_date)'))
-            ->orderBy('date')
-            ->get();
+        $query = DB::table('orders')
+            ->where('status', '!=', 'cancelled');
 
-        // Format for frontend charting library: labels + data
-        $formatted = [
-            'labels' => $sales->pluck('date'),
+        $now = now();
+
+        switch ($range) {
+            case 'day':
+                $start = $now->copy()->startOfDay();
+                $sales = $query
+                    ->whereBetween('order_date', [$start, $now])
+                    ->selectRaw("HOUR(order_date) as label, SUM(total_amount) as total_sales")
+                    ->groupByRaw("HOUR(order_date)")
+                    ->orderBy('label')
+                    ->get();
+                $labels = $sales->pluck('label')->map(fn($h) => Carbon::createFromTime($h)->format('g A'));
+                break;
+
+            case 'week':
+                $start = $now->copy()->startOfWeek();
+                $sales = $query
+                    ->whereBetween('order_date', [$start, $now])
+                    ->selectRaw("DAYOFWEEK(order_date) as label, SUM(total_amount) as total_sales")
+                    ->groupByRaw("DAYOFWEEK(order_date)")
+                    ->orderBy('label')
+                    ->get();
+
+                $weekdays = [
+                    1 => 'Sun',
+                    2 => 'Mon',
+                    3 => 'Tue',
+                    4 => 'Wed',
+                    5 => 'Thu',
+                    6 => 'Fri',
+                    7 => 'Sat'
+                ];
+
+                $labels = $sales->pluck('label')->map(fn($dayNum) => $weekdays[$dayNum]);
+                break;
+
+
+            case 'month':
+                $start = $now->copy()->startOfMonth(); 
+                $sales = $query
+                    ->whereBetween('order_date', [$start, $now])
+                    ->selectRaw("DATE(order_date) as label, SUM(total_amount) as total_sales")
+                    ->groupByRaw("DATE(order_date)")
+                    ->orderBy('label')
+                    ->get();
+
+                $labels = $sales->pluck('label')->map(fn($d) => Carbon::parse($d)->format('M j'));
+                break;
+
+
+            case 'year':
+                $start = $now->copy()->startOfYear();
+                $sales = $query
+                    ->whereBetween('order_date', [$start, $now])
+                    ->selectRaw("MONTH(order_date) as label, SUM(total_amount) as total_sales")
+                    ->groupByRaw("MONTH(order_date)")
+                    ->orderBy('label')
+                    ->get();
+
+                $months = [
+                    1 => 'Jan',
+                    2 => 'Feb',
+                    3 => 'Mar',
+                    4 => 'Apr',
+                    5 => 'May',
+                    6 => 'Jun',
+                    7 => 'Jul',
+                    8 => 'Aug',
+                    9 => 'Sep',
+                    10 => 'Oct',
+                    11 => 'Nov',
+                    12 => 'Dec'
+                ];
+                $labels = $sales->pluck('label')->map(fn($m) => $months[$m]);
+                break;
+
+            case 'all':
+                $sales = $query
+                    ->selectRaw("YEAR(order_date) as label, SUM(total_amount) as total_sales")
+                    ->groupByRaw("YEAR(order_date)")
+                    ->orderBy('label')
+                    ->get();
+
+                $labels = $sales->pluck('label')->map(fn($y) => (string) $y);
+                break;
+        }
+
+        return response()->json([
+            'labels' => $labels,
             'data' => $sales->pluck('total_sales'),
-        ];
-
-        return response()->json($formatted);
+        ]);
     }
-
-  
-
 }
 
 
