@@ -431,10 +431,7 @@ class CartController extends Controller
 
         // Check stock availability
         if ($cartItem->product_variant_id) {
-            // $variant = ProductVariant::find($cartItem->product_variant_id);
-            // if ($validated['quantity'] > $variant->stock) {
-            //     return response()->json(['error' => 'Not enough stock'], 400);
-            // }
+           
 
             $available = $this->getAvailableStock($cartItem->product_id, $cartItem->product_variant_id);
 

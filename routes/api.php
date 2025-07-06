@@ -407,6 +407,12 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
     // Dashboard
     Route::get('/dashboard/summary', [DashboardController::class, 'summary'])
         ->middleware('permission:dashboard.view');
+
+    Route::get('/dashboard/sales-chart', [DashboardController::class, 'salesChart']);
+
+
+    
+
     // Roles & Permissions
     Route::get('/roles', [RoleController::class, 'index'])->middleware('permission:roles.view');
     Route::get('/roles/{id}', [RoleController::class, 'show'])->middleware('permission:roles.view');
@@ -430,12 +436,12 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
     Route::get('/settings/{slug}', [SettingController::class, 'show'])->middleware('permission:settings.view');
     Route::put('/settings/{slug}', [SettingController::class, 'update'])->middleware('permission:settings.update');
 
-  
+
     Route::get('/faqs', [FaqController::class, 'index'])->middleware('permission:faqs.view');
-     Route::get('/faqs/{faq}', [FaqController::class, 'show'])->middleware('permission:faqs.view');
+    Route::get('/faqs/{faq}', [FaqController::class, 'show'])->middleware('permission:faqs.view');
     Route::post('/faqs', [FaqController::class, 'store'])->middleware('permission:faqs.create');
     Route::put('/faqs/{faq}', [FaqController::class, 'update'])->middleware('permission:faqs.update');
-   
+
     Route::delete('/faqs/{faq}', [FaqController::class, 'destroy'])->middleware('permission:faqs.delete');
     Route::patch('/faqs/{faq}/toggle', [FaqController::class, 'toggle'])->middleware('permission:faqs.update');
 });
