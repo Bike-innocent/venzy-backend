@@ -409,9 +409,11 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
         ->middleware('permission:dashboard.view');
 
     Route::get('/dashboard/sales-chart', [DashboardController::class, 'salesChart']);
+    Route::get('/dashboard/low-stock', [DashboardController::class, 'lowStock']);
 
 
-    
+
+
 
     // Roles & Permissions
     Route::get('/roles', [RoleController::class, 'index'])->middleware('permission:roles.view');

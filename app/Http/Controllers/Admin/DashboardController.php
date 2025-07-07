@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -32,26 +34,7 @@ class DashboardController extends Controller
 
 
 
-    // public function salesChart()
-    // {
-    //     $startDate = Carbon::now()->subDays(30); // last 30 days
 
-    //     $sales = DB::table('orders')
-    //         ->selectRaw('DATE(order_date) as date, SUM(total_amount) as total_sales')
-    //         ->where('status', '!=', 'cancelled') // ignore cancelled orders
-    //         ->whereDate('order_date', '>=', $startDate)
-    //         ->groupBy(DB::raw('DATE(order_date)'))
-    //         ->orderBy('date')
-    //         ->get();
-
-    //     // Format for frontend charting library: labels + data
-    //     $formatted = [
-    //         'labels' => $sales->pluck('date'),
-    //         'data' => $sales->pluck('total_sales'),
-    //     ];
-
-    //     return response()->json($formatted);
-    // }
 
 
     public function salesChart(Request $request)
@@ -99,7 +82,7 @@ class DashboardController extends Controller
 
 
             case 'month':
-                $start = $now->copy()->startOfMonth(); 
+                $start = $now->copy()->startOfMonth();
                 $sales = $query
                     ->whereBetween('order_date', [$start, $now])
                     ->selectRaw("DATE(order_date) as label, SUM(total_amount) as total_sales")
@@ -153,82 +136,191 @@ class DashboardController extends Controller
             'data' => $sales->pluck('total_sales'),
         ]);
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // public function lowStock()
+    // {
+    //     $threshold = 5;
+
+    //     // ✅ Variant-based products
+    //     $variants = ProductVariant::with(['product.images'])
+    //         ->withSum(['orderItems as committed_quantity' => function ($q) {
+    //             $q->whereHas('order', function ($q) {
+    //                 $q->whereIn('status', ['processing', 'shipped']);
+    //             });
+    //         }], 'quantity')
+    //         ->get()
+    //         ->map(function ($variant) {
+    //             $product = $variant->product;
+    //             $image = optional($product->images->first())->image_path;
+    //             $image = $image ? url('product-images/' . $image) : null;
+
+    //             $onHand = $variant->stock;
+    //             $committed = $variant->committed_quantity ?? 0;
+    //             $available = max(0, $onHand - $committed);
+
+    //             return [
+    //                 'type'         => 'variant',
+    //                 'variant_id'   => $variant->id,
+    //                 'product_id'   => $product->id,
+    //                 'product_name' => $product->name,
+    //                 'product_slug' => $product->slug,
+    //                 'combo_key'    => $variant->combo_key,
+    //                 'image'        => $image,
+    //                 'on_hand'      => $onHand,
+    //                 'committed'    => $committed,
+    //                 'available'    => $available,
+    //             ];
+    //         })->filter(fn($item) => $item['available'] <= $threshold);
+
+    //     // ✅ Simple products
+    //     $simple = Product::with('images')
+    //         ->whereDoesntHave('variants')
+    //         ->get()
+    //         ->map(function ($product) {
+    //             $image = optional($product->images->first())->image_path;
+    //             $image = $image ? url('product-images/' . $image) : null;
+
+    //             $committed = OrderItem::where('product_id', $product->id)
+    //                 ->whereNull('product_variant_id')
+    //                 ->whereHas('order', function ($q) {
+    //                     $q->whereIn('status', ['processing', 'shipped']);
+    //                 })
+    //                 ->sum('quantity');
+
+    //             $onHand = $product->stock;
+    //             $available = max(0, $onHand - $committed);
+
+    //             return [
+    //                 'type'         => 'simple',
+    //                 'variant_id'   => null,
+    //                 'product_id'   => $product->id,
+    //                 'product_name' => $product->name,
+    //                 'product_slug' => $product->slug,
+    //                 'combo_key'    => '-', // placeholder
+    //                 'image'        => $image,
+    //                 'on_hand'      => $onHand,
+    //                 'committed'    => $committed,
+    //                 'available'    => $available,
+    //             ];
+    //         })->filter(fn($item) => $item['available'] <= $threshold);
+
+    //     // Merge and return
+    //     $lowStock = $variants->merge($simple)->sortBy('available')->values();
+
+    //     return response()->json($lowStock);
+    // }
+
+
+
+
+
+
+
+    public function lowStock(Request $request)
+    {
+        $range = $request->query('range', '0-5'); // default to 0-5
+        $perPage = $request->query('per_page', 10);
+
+        [$min, $max] = explode('-', $range);
+        $min = (int) $min;
+        $max = (int) $max;
+
+        $thresholdFilter = fn($available) => $available >= $min && $available <= $max;
+
+        // ✅ Variant products
+        $variants = ProductVariant::with(['product.images'])
+            ->withSum(['orderItems as committed_quantity' => function ($q) {
+                $q->whereHas('order', function ($q) {
+                    $q->whereIn('status', ['processing', 'shipped']);
+                });
+            }], 'quantity')
+            ->get()
+            ->map(function ($variant) {
+                $product = $variant->product;
+                $image = optional($product->images->first())->image_path;
+                $image = $image ? url('product-images/' . $image) : null;
+
+                $onHand = $variant->stock;
+                $committed = $variant->committed_quantity ?? 0;
+                $available = max(0, $onHand - $committed);
+
+                return [
+                    'type'         => 'variant',
+                    'variant_id'   => $variant->id,
+                    'product_id'   => $product->id,
+                    'product_name' => $product->name,
+                    'product_slug' => $product->slug,
+                    'combo_key'    => $variant->combo_key,
+                    'image'        => $image,
+                    'on_hand'      => $onHand,
+                    'committed'    => $committed,
+                    'available'    => $available,
+                ];
+            })->filter(fn($item) => $thresholdFilter($item['available']));
+
+        // ✅ Simple products
+        $simple = Product::with('images')
+            ->whereDoesntHave('variants')
+            ->get()
+            ->map(function ($product) {
+                $image = optional($product->images->first())->image_path;
+                $image = $image ? url('product-images/' . $image) : null;
+
+                $committed = OrderItem::where('product_id', $product->id)
+                    ->whereNull('product_variant_id')
+                    ->whereHas('order', function ($q) {
+                        $q->whereIn('status', ['processing', 'shipped']);
+                    })
+                    ->sum('quantity');
+
+                $onHand = $product->stock;
+                $available = max(0, $onHand - $committed);
+
+                return [
+                    'type'         => 'simple',
+                    'variant_id'   => null,
+                    'product_id'   => $product->id,
+                    'product_name' => $product->name,
+                    'product_slug' => $product->slug,
+                    'combo_key'    => '-',
+                    'image'        => $image,
+                    'on_hand'      => $onHand,
+                    'committed'    => $committed,
+                    'available'    => $available,
+                ];
+            })->filter(fn($item) => $thresholdFilter($item['available']));
+
+        // Merge and paginate manually
+        $all = $variants->merge($simple)->sortBy('available')->values();
+        $page = $request->query('page', 1);
+        $offset = ($page - 1) * $perPage;
+        $paginated = $all->slice($offset, $perPage)->values();
+
+        return response()->json([
+            'data' => $paginated,
+            'meta' => [
+                'current_page' => (int) $page,
+                'per_page'     => (int) $perPage,
+                'total'        => $all->count(),
+                'last_page'    => ceil($all->count() / $perPage),
+            ]
+        ]);
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// ->selectRaw('YEARWEEK(order_date, 1) as week, SUM(total_amount) as total_sales')
-
-
-
-// ->selectRaw('DATE_FORMAT(order_date, "%Y-%m") as month, SUM(total_amount) as total_sales')
-
-
-
-
-
-
-
-//   public function topProducts()
-//     {
-//         $topProducts = DB::table('order_items')
-//             ->select('product_id', DB::raw('SUM(quantity) as total_quantity'))
-//             ->groupBy('product_id')
-//             ->orderByDesc('total_quantity')
-//             ->limit(10)
-//             ->get();
-
-//         $products = Product::whereIn('id', $topProducts->pluck('product_id'))->get();
-
-//         return response()->json($products);
-//     }
-
-//     public function topCustomers()
-//     {
-//         $topCustomers = DB::table('orders')
-//             ->select('user_id', DB::raw('COUNT(*) as order_count'))
-//             ->groupBy('user_id')
-//             ->orderByDesc('order_count')
-//             ->limit(10)
-//             ->get();
-
-//         $customers = User::whereIn('id', $topCustomers->pluck('user_id'))->get();
-
-//         return response()->json($customers);
-//     }
-
-//     public function recentOrders()
-//     {
-//         $orders = Order::with('user')
-//             ->orderByDesc('created_at')
-//             ->take(10)
-//             ->get();
-
-//         return response()->json($orders);
-//     }
-
-//     public function recentCustomers()
-//     {
-//         $customers = User::orderByDesc('created_at')
-//             ->take(10)
-//             ->get();
-
-//         return response()->json($customers);
-//     }

@@ -35,7 +35,7 @@ return new class extends Migration
             $table->text('description');
             $table->decimal('average_price', 10, 2);  //use incase of simple product
             $table->decimal('compared_at_price', 10, 2)->nullable();
-             $table->integer('stock'); 
+             $table->integer('stock'); //use incase of simple product
             $table->boolean('status')->default(true);
             $table->timestamps();
             $table->softDeletes();
