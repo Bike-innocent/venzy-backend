@@ -323,4 +323,44 @@ class DashboardController extends Controller
             ]
         ]);
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+    public function recentOrders(Request $request)
+    {
+        $limit = $request->query('limit', 5); // default to 5
+
+        $orders = Order::with(['user', 'address'])
+            ->latest('order_date')
+            ->limit($limit)
+            ->get()
+            ->map(function ($order) {
+                return [
+                    'id' => $order->id,
+                    'user' => [
+                        'name' => $order->user->name,
+                        'email' => $order->user->email,
+                    ],
+                    'address' => $order->address->state ?? '',
+                    'status' => $order->status,
+                    'total_amount' => $order->total_amount,
+                   'order_date' => \Carbon\Carbon::parse($order->order_date)->format('Y-m-d H:i'),
+
+                ];
+            });
+
+        return response()->json($orders);
+    }
+
+
 }

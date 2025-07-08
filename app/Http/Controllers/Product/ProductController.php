@@ -44,7 +44,6 @@ class ProductController extends Controller
                 });
 
 
-
                 $product->variants = $product->variants->map(function ($variant) {
                     $attributes = [];
 

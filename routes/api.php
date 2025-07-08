@@ -202,33 +202,7 @@
 //     Route::get('/admin/dashboard/summary', [DashboardController::class, 'summary']);
 // });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+use App\Http\Controllers\Admin\AdminProductController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Sanctum\Http\Controllers\CsrfCookieController;
 
@@ -371,7 +345,7 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
 
     // Products
-    Route::get('/products', [ProductController::class, 'index'])->middleware('permission:products.view');
+    Route::get('/products', [AdminProductController::class, 'index'])->middleware('permission:products.view');
     Route::post('/products', [ProductController::class, 'store'])->middleware('permission:products.create');
     // Route::put('/products/{product}', [ProductController::class, 'update'])->middleware('permission:products.update');
 
@@ -410,6 +384,7 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/dashboard/sales-chart', [DashboardController::class, 'salesChart']);
     Route::get('/dashboard/low-stock', [DashboardController::class, 'lowStock']);
+    Route::get('/dashboard/recent-orders', [DashboardController::class, 'recentOrders']);
 
 
 
