@@ -1,15 +1,17 @@
 <?php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class AdminProductController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Product::with(['category', 'images','variants']);
+        $query = Product::with(['category', 'images', 'variants']);
 
         // 🔹 Filter by status
         if ($request->status === 'active') {
@@ -59,5 +61,47 @@ class AdminProductController extends Controller
                 'total' => $products->total(),
             ],
         ]);
+    }
+
+
+    public function bulkUpdate(Request $request)
+    {
+        // ✅ Validate request
+        $validator = Validator::make($request->all(), [
+            'ids' => 'required|array',
+            'ids.*' => 'exists:products,id',
+            'status' => 'required|in:0,1',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation error',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        // ✅ Update products
+        Product::whereIn('id', $request->ids)->update([
+            'status' => $request->status,
+        ]);
+
+        return response()->json([
+            'message' => 'Products updated successfully',
+        ]);
+    }
+
+
+
+
+    public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:products,id',
+        ]);
+
+        Product::whereIn('id', $request->ids)->delete();
+
+        return response()->json(['message' => 'Products deleted successfully']);
     }
 }

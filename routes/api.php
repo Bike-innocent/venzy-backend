@@ -346,6 +346,9 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
 
     // Products
     Route::get('/products', [AdminProductController::class, 'index'])->middleware('permission:products.view');
+    Route::post('/products/bulk-update', [AdminProductController::class, 'bulkUpdate'])->middleware('permission:products.update');
+    Route::post('/products/bulk-delete', [AdminProductController::class, 'bulkDelete'])->middleware('permission:products.delete');
+
     Route::post('/products', [ProductController::class, 'store'])->middleware('permission:products.create');
     // Route::put('/products/{product}', [ProductController::class, 'update'])->middleware('permission:products.update');
 
