@@ -164,12 +164,13 @@ class ProductController extends Controller
             //product table
             'name' => 'required|string|max:255',
             'description' => 'required|string',
-            'stock' => 'required|integer',
+             'stock' => 'nullable|integer',
             'average_price' => 'required|numeric',
             'compared_at_price' => 'nullable|numeric',
             'category_id' => 'required|exists:categories,id',
             'brand_id' => 'nullable|exists:brands,id',
             'status' => 'required|in:0,1',
+
 
 
             //product_images table
@@ -201,7 +202,7 @@ class ProductController extends Controller
                 'description' => $validated['description'],
                 'category_id' => $validated['category_id'],
                 'brand_id' => $validated['brand_id'] ?? null,
-                'stock' => $validated['stock'],
+                'stock' => $validated['stock'] ?? null,
                 'average_price' => $validated['average_price'] ?? null,
                 'compared_at_price' => $validated['compared_at_price'] ?? null,
                 'status' => $validated['status'],
@@ -342,7 +343,7 @@ class ProductController extends Controller
             // Product fields
             'name' => 'required|string|max:255',
             'description' => 'required|string',
-            'stock' => 'required|integer',
+            'stock' => 'nullable|integer',
             'average_price' => 'required|numeric',
             'compared_at_price' => 'nullable|numeric',
             'category_id' => 'required|exists:categories,id',
@@ -387,7 +388,7 @@ class ProductController extends Controller
                 'description' => $validated['description'],
                 'category_id' => $validated['category_id'],
                 'brand_id' => $validated['brand_id'] ?? null,
-                'stock' => $validated['stock'],
+                'stock' => $validated['stock'] ?? null,
                 'average_price' => $validated['average_price'],
                 'compared_at_price' => $validated['compared_at_price'] ?? null,
                 'status' => $validated['status'],
@@ -737,7 +738,7 @@ class ProductController extends Controller
 
         $product->setRelation('variant_options', $variantOptions);
 
-      
+
 
         return response()->json($product);
     }
