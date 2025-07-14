@@ -36,31 +36,56 @@ class AdminCustomerController extends Controller
 
 
 
-    public function index()
-    {
+    // public function index()
+    // {
 
-        $customers = \App\Models\User::whereHas('orders')
-            ->withCount('orders')
-            ->withSum('orders', 'total_amount')
-            ->with(['addresses' => function ($q) {
-                $q->orderByDesc('is_default')->orderByDesc('id')->limit(1);
-            }])
-            ->orderByDesc('orders_count')
-            ->get()
-            ->map(function ($user) {
-                $address = $user->addresses->first();
-                return [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'orders_count' => $user->orders_count,
-                    'total_spent' => $user->orders_sum_total_amount,
-                    'location' => $address ? "{$address->city}, {$address->state}" : 'N/A',
-                ];
-            });
+    //     $customers = \App\Models\User::whereHas('orders')
+    //         ->withCount('orders')
+    //         ->withSum('orders', 'total_amount')
+    //         ->with(['addresses' => function ($q) {
+    //             $q->orderByDesc('is_default')->orderByDesc('id')->limit(1);
+    //         }])
+    //         ->orderByDesc('orders_count')
+    //         ->get()
+    //         ->map(function ($user) {
+    //             $address = $user->addresses->first();
+    //             return [
+    //                 'id' => $user->id,
+    //                 'name' => $user->name,
+    //                 'email' => $user->email,
+    //                 'orders_count' => $user->orders_count,
+    //                 'total_spent' => $user->orders_sum_total_amount,
+    //                 'location' => $address ? "{$address->city}, {$address->state}" : 'N/A',
+    //             ];
+    //         });
 
-        return response()->json($customers);
-    }
+    //     return response()->json($customers);
+    // }
+
+    
+public function index()
+{
+    $customers = \App\Models\User::withCount('orders')
+        ->withSum('orders', 'total_amount')
+        ->with(['addresses' => function ($q) {
+            $q->orderByDesc('is_default')->orderByDesc('id')->limit(1);
+        }])
+        ->orderByDesc('orders_count')
+        ->get()
+        ->map(function ($user) {
+            $address = $user->addresses->first();
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'orders_count' => $user->orders_count,
+                'total_spent' => $user->orders_sum_total_amount,
+                'location' => $address ? "{$address->city}, {$address->state}" : 'N/A',
+            ];
+        });
+
+    return response()->json($customers);
+}
 
 
 

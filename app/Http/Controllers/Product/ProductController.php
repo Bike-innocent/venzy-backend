@@ -164,7 +164,7 @@ class ProductController extends Controller
             //product table
             'name' => 'required|string|max:255',
             'description' => 'required|string',
-             'stock' => 'nullable|integer',
+            'stock' => 'nullable|integer',
             'average_price' => 'required|numeric',
             'compared_at_price' => 'nullable|numeric',
             'category_id' => 'required|exists:categories,id',
@@ -239,14 +239,32 @@ class ProductController extends Controller
             // Save product variants
             $variantMap = [];
             // foreach ($validated['product_variants'] as $variant) {
+            // foreach ($validated['product_variants'] ?? [] as $variant) {
+            //     $pv = $product->variants()->create([
+            //         'combo_key' => $variant['comboKey'],
+            //         'price' => $variant['price'],
+            //         'stock' => $variant['stock'],
+            //     ]);
+            //     $variantMap[$variant['index']] = $pv->id;
+            // }
+
             foreach ($validated['product_variants'] ?? [] as $variant) {
+                $price = $variant['price'] ?? 0;
+
+                // If price is missing or zero, fallback to average_price
+                if (!$price || floatval($price) === 0.0) {
+                    $price = $validated['average_price'];
+                }
+
                 $pv = $product->variants()->create([
                     'combo_key' => $variant['comboKey'],
-                    'price' => $variant['price'],
+                    'price' => $price,
                     'stock' => $variant['stock'],
                 ]);
+
                 $variantMap[$variant['index']] = $pv->id;
             }
+
 
 
 
