@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('product_id')->constrained()->onDelete('cascade');
             $table->foreignId('product_variant_id')->nullable()->constrained()->onDelete('cascade'); // ← Nullable
             $table->string('image_path');
+            $table->integer('order_column')->nullable(); // ← Nullable, for sorting images
             $table->timestamps();
         });
     }

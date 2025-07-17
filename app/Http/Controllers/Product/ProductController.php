@@ -374,6 +374,12 @@ class ProductController extends Controller
             'deleted_images' => 'array',
             'deleted_images.*' => 'string',
 
+
+            'image_order' => 'array',
+            'image_order.*.id' => 'nullable|integer|exists:product_images,id',
+            'image_order.*.temp_name' => 'nullable|string',
+            'image_order.*.position' => 'required|integer',
+
             // Variant options
             'product_variant_options' => 'array',
             'product_variant_options.*.variant_option_id' => 'required|exists:variant_options,id',
@@ -435,29 +441,104 @@ class ProductController extends Controller
 
 
 
-    protected function syncProductImages($product, $validated, $request)
-    {
-        if (!empty($validated['deleted_images'])) {
-            $product->images()->whereIn('id', $validated['deleted_images'])->get()->each(function ($image) {
-                $fullPath = public_path('product-images/' . $image->image_path);
-                if (file_exists($fullPath)) {
-                    unlink($fullPath);
-                }
-                $image->delete();
-            });
-        }
+    // protected function syncProductImages($product, $validated, $request)
+    // {
+    //     if (!empty($validated['deleted_images'])) {
+    //         $product->images()->whereIn('id', $validated['deleted_images'])->get()->each(function ($image) {
+    //             $fullPath = public_path('product-images/' . $image->image_path);
+    //             if (file_exists($fullPath)) {
+    //                 unlink($fullPath);
+    //             }
+    //             $image->delete();
+    //         });
+    //     }
 
-        if ($request->hasFile('new_images')) {
-            foreach ($request->file('new_images') as $image) {
-                $filename = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-                $image->move(public_path('product-images'), $filename);
-                $product->images()->create(['image_path' => $filename]);
+    //     if ($request->hasFile('new_images')) {
+    //         foreach ($request->file('new_images') as $image) {
+    //             $filename = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+    //             $image->move(public_path('product-images'), $filename);
+    //             $product->images()->create(['image_path' => $filename]);
+    //         }
+    //     }
+
+    //     if ($request->has('image_order')) {
+    //         foreach ($request->input('image_order') as $item) {
+    //             if (isset($item['id'])) {
+    //                 // Update order for existing image
+    //                 $product->images()->where('id', $item['id'])->update([
+    //                     'order_column' => $item['position'],
+    //                 ]);
+    //             } elseif (isset($item['temp_name'])) {
+    //                 // Try to find newly uploaded image by filename match
+    //                 $matched = $product->images()
+    //                     ->where('image_path', 'like', '%' . $item['temp_name'])
+    //                     ->orderByDesc('id')
+    //                     ->first();
+
+    //                 if ($matched) {
+    //                     $matched->update(['order_column' => $item['position']]);
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
+
+
+
+
+
+
+
+
+
+
+
+    protected function syncProductImages($product, $validated, $request)
+{
+    $newImageMap = [];
+
+    // 1. Delete selected images
+    if (!empty($validated['deleted_images'])) {
+        $product->images()->whereIn('id', $validated['deleted_images'])->get()->each(function ($image) {
+            $fullPath = public_path('product-images/' . $image->image_path);
+            if (file_exists($fullPath)) {
+                unlink($fullPath);
             }
+            $image->delete();
+        });
+    }
+
+    // 2. Upload new images and track filenames for later mapping
+    if ($request->hasFile('new_images')) {
+        foreach ($request->file('new_images') as $image) {
+            $originalName = $image->getClientOriginalName(); // retain temp name
+            $filename = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+            $image->move(public_path('product-images'), $filename);
+            $newImage = $product->images()->create(['image_path' => $filename]);
+
+            // Save mapping so we can assign order later
+            $newImageMap[$originalName] = $newImage->id;
         }
     }
 
-
-
+    // 3. Update image order
+    if ($request->has('image_order')) {
+        foreach ($request->input('image_order') as $item) {
+            if (isset($item['id'])) {
+                // Existing image
+                $product->images()->where('id', $item['id'])->update([
+                    'order_column' => $item['position'],
+                ]);
+            } elseif (isset($item['temp_name']) && isset($newImageMap[$item['temp_name']])) {
+                // Match new uploaded image by original name
+                $imageId = $newImageMap[$item['temp_name']];
+                $product->images()->where('id', $imageId)->update([
+                    'order_column' => $item['position'],
+                ]);
+            }
+        }
+    }
+}
 
 
 
