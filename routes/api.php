@@ -380,6 +380,7 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
     // Inventory
     Route::get('/inventory', [InventoryController::class, 'index'])->middleware('permission:inventory.view');
     Route::patch('/inventory/update-stock/{type}/{id}', [InventoryController::class, 'updateStock'])->middleware('permission:inventory.update');
+    Route::post('/inventory/bulk-update', [InventoryController::class, 'bulkUpdateStock'])->middleware('permission:inventory.update');
 
     // Dashboard
     Route::get('/dashboard/summary', [DashboardController::class, 'summary'])

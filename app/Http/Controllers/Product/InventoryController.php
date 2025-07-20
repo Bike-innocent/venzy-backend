@@ -23,172 +23,6 @@ use Illuminate\Support\Collection;
 
 class InventoryController extends Controller
 {
-    // public function index()
-    // {
-    //     // ✅ Variant-based products
-    //     $variants = ProductVariant::with(['product.images'])
-    //         ->withSum(['orderItems as committed_quantity' => function ($q) {
-    //             $q->whereHas('order', function ($q) {
-    //                 $q->whereIn('status', ['processing', 'shipped']);
-    //             });
-    //         }], 'quantity')
-    //         ->get()
-    //         ->map(function ($variant) {
-    //             $product = $variant->product;
-    //             $image = optional($product->images->first())->image_path;
-    //             $image = $image ? url('product-images/' . $image) : null;
-
-    //             $onHand = $variant->stock;
-    //             $committed = $variant->committed_quantity ?? 0;
-    //             $available = max(0, $onHand - $committed);
-
-    //             return [
-    //                 'type'         => 'variant',
-    //                 'variant_id'   => $variant->id,
-    //                 'product_id'   => $product->id,
-    //                 'product_name' => $product->name,
-    //                 'product_slug' => $product->slug,   
-    //                 'combo_key'    => $variant->combo_key,
-    //                 'image'        => $image,
-    //                 'on_hand'      => $onHand,
-    //                 'committed'    => $committed,
-    //                 'available'    => $available,
-    //             ];
-    //         });
-
-    //     // ✅ Simple products (no variants)
-    //     $simpleProducts = Product::with('images')
-    //         ->whereDoesntHave('variants')
-    //         ->get()
-    //         ->map(function ($product) {
-    //             $image = optional($product->images->first())->image_path;
-    //             $image = $image ? url('product-images/' . $image) : null;
-
-    //             $committed = OrderItem::where('product_id', $product->id)
-    //                 ->whereNull('product_variant_id') // ✅ simple product only
-    //                 ->whereHas('order', function ($q) {
-    //                     $q->whereIn('status', ['processing', 'shipped']);
-    //                 })
-    //                 ->sum('quantity');
-
-    //             $onHand = $product->stock;
-    //             $available = max(0, $onHand - $committed);
-
-    //             return [
-    //                 'type'         => 'simple',
-    //                 'variant_id'   => null,
-    //                 'product_id'   => $product->id,
-    //                 'product_name' => $product->name,
-    //                  'product_slug' => $product->slug,   
-    //                 'combo_key'    => '-', // no combo
-    //                 'image'        => $image,
-    //                 'on_hand'      => $onHand,
-    //                 'committed'    => $committed,
-    //                 'available'    => $available,
-    //             ];
-    //         });
-
-    //     // ✅ Merge both
-    //     $inventory = $variants->merge($simpleProducts);
-
-    //     return response()->json($inventory->values());
-    // }
-
-
-
-
-
-
-
-
-    // public function index()
-    // {
-    //     // ✅ Variant-based products
-    //     $variants = ProductVariant::with(['product.images'])
-    //         ->withSum(['orderItems as committed_quantity' => function ($q) {
-    //             $q->whereHas('order', function ($q) {
-    //                 $q->whereIn('status', ['processing', 'shipped']);
-    //             });
-    //         }], 'quantity')
-    //         ->get()
-    //         ->map(function ($variant) {
-    //             $product = $variant->product;
-    //             if (!$product) {
-    //                 // Skip if product is missing (data integrity issue)
-    //                 return null;
-    //             }
-    //             $image = optional($product->images->first())->image_path;
-    //             $image = $image ? url('product-images/' . $image) : null;
-
-    //             $onHand = $variant->stock;
-    //             $committed = $variant->committed_quantity ?? 0;
-    //             $available = max(0, $onHand - $committed);
-
-    //             return [
-    //                 'type'         => 'variant',
-    //                 'variant_id'   => $variant->id,
-    //                 'product_id'   => $product->id,
-    //                 'product_name' => $product->name,
-    //                 'product_slug' => $product->slug,
-    //                 'combo_key'    => $variant->combo_key,
-    //                 'image'        => $image,
-    //                 'on_hand'      => $onHand,
-    //                 'committed'    => $committed,
-    //                 'available'    => $available,
-    //             ];
-    //         })
-    //         ->filter(); // Remove nulls
-
-    //     // ✅ Simple products (no variants)
-    //     $simpleProducts = Product::with('images')
-    //         ->whereDoesntHave('variants')
-    //         ->get()
-    //         ->map(function ($product) {
-    //             $image = optional($product->images->first())->image_path;
-    //             $image = $image ? url('product-images/' . $image) : null;
-
-    //             $committed = OrderItem::where('product_id', $product->id)
-    //                 ->whereNull('product_variant_id') // ✅ simple product only
-    //                 ->whereHas('order', function ($q) {
-    //                     $q->whereIn('status', ['processing', 'shipped']);
-    //                 })
-    //                 ->sum('quantity');
-
-    //             $onHand = $product->stock;
-    //             $available = max(0, $onHand - $committed);
-
-    //             return [
-    //                 'type'         => 'simple',
-    //                 'variant_id'   => null,
-    //                 'product_id'   => $product->id,
-    //                 'product_name' => $product->name,
-    //                 'product_slug' => $product->slug,
-    //                 'combo_key'    => '-', // no combo
-    //                 'image'        => $image,
-    //                 'on_hand'      => $onHand,
-    //                 'committed'    => $committed,
-    //                 'available'    => $available,
-    //             ];
-    //         });
-
-    //     // ✅ Merge both
-    //     $inventory = $variants->merge($simpleProducts);
-
-    //     return response()->json($inventory->values());
-    // }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -287,7 +121,7 @@ class InventoryController extends Controller
 
         // 🔹 Pagination manually
         $page = $request->get('page', 1);
-        $perPage = 15;
+        $perPage = 50;
         $paginated = new LengthAwarePaginator(
             $inventory->forPage($page, $perPage)->values(),
             $inventory->count(),
@@ -310,20 +144,13 @@ class InventoryController extends Controller
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    /**     * Update stock for a product or variant.
+     *
+     * @param Request $request
+     * @param string $type 'variant' or 'simple'
+     * @param int $id Product or variant ID
+     * @return \Illuminate\Http\JsonResponse
+     */
 
     public function updateStock(Request $request, $type, $id)
     {
@@ -341,6 +168,42 @@ class InventoryController extends Controller
             $product->save();
         } else {
             return response()->json(['error' => 'Invalid type'], 400);
+        }
+
+        return response()->json(['message' => 'Stock updated successfully.']);
+    }
+
+    /**     * Bulk update stock for multiple products or variants.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+
+    public function bulkUpdateStock(Request $request)
+    {
+        $validated = $request->validate([
+            'method' => 'required|in:add,set',
+            'items' => 'required|array',
+            'items.*.id' => 'required|integer',
+            'items.*.stock' => 'required|integer|min:0',
+        ]);
+
+        foreach ($validated['items'] as $item) {
+            $isVariant = ProductVariant::where('id', $item['id'])->exists();
+
+            if ($isVariant) {
+                $variant = ProductVariant::findOrFail($item['id']);
+                $variant->stock = $validated['method'] === 'add'
+                    ? $variant->stock + $item['stock']
+                    : $item['stock'];
+                $variant->save();
+            } else {
+                $product = Product::whereDoesntHave('variants')->findOrFail($item['id']);
+                $product->stock = $validated['method'] === 'add'
+                    ? $product->stock + $item['stock']
+                    : $item['stock'];
+                $product->save();
+            }
         }
 
         return response()->json(['message' => 'Stock updated successfully.']);
