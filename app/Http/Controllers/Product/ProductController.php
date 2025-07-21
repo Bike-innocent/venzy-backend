@@ -494,51 +494,65 @@ class ProductController extends Controller
 
 
     protected function syncProductImages($product, $validated, $request)
-{
-    $newImageMap = [];
+    {
+        $newImageMap = [];
 
-    // 1. Delete selected images
-    if (!empty($validated['deleted_images'])) {
-        $product->images()->whereIn('id', $validated['deleted_images'])->get()->each(function ($image) {
-            $fullPath = public_path('product-images/' . $image->image_path);
-            if (file_exists($fullPath)) {
-                unlink($fullPath);
+        // 1. Delete selected images
+        if (!empty($validated['deleted_images'])) {
+            $product->images()->whereIn('id', $validated['deleted_images'])->get()->each(function ($image) {
+                $fullPath = public_path('product-images/' . $image->image_path);
+                if (file_exists($fullPath)) {
+                    unlink($fullPath);
+                }
+                $image->delete();
+            });
+        }
+
+        // 2. Upload new images and track filenames for later mapping
+        if ($request->hasFile('new_images')) {
+            foreach ($request->file('new_images') as $image) {
+                $originalName = $image->getClientOriginalName(); // retain temp name
+                $filename = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                $image->move(public_path('product-images'), $filename);
+                $newImage = $product->images()->create(['image_path' => $filename]);
+
+                // Save mapping so we can assign order later
+                $newImageMap[$originalName] = $newImage->id;
             }
-            $image->delete();
-        });
-    }
+        }
 
-    // 2. Upload new images and track filenames for later mapping
-    if ($request->hasFile('new_images')) {
-        foreach ($request->file('new_images') as $image) {
-            $originalName = $image->getClientOriginalName(); // retain temp name
-            $filename = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-            $image->move(public_path('product-images'), $filename);
-            $newImage = $product->images()->create(['image_path' => $filename]);
-
-            // Save mapping so we can assign order later
-            $newImageMap[$originalName] = $newImage->id;
+        // 3. Update image order
+        if ($request->has('image_order')) {
+            foreach ($request->input('image_order') as $item) {
+                if (isset($item['id'])) {
+                    // Existing image
+                    $product->images()->where('id', $item['id'])->update([
+                        'order_column' => $item['position'],
+                    ]);
+                } elseif (isset($item['temp_name']) && isset($newImageMap[$item['temp_name']])) {
+                    // Match new uploaded image by original name
+                    $imageId = $newImageMap[$item['temp_name']];
+                    $product->images()->where('id', $imageId)->update([
+                        'order_column' => $item['position'],
+                    ]);
+                }
+            }
         }
     }
 
-    // 3. Update image order
-    if ($request->has('image_order')) {
-        foreach ($request->input('image_order') as $item) {
-            if (isset($item['id'])) {
-                // Existing image
-                $product->images()->where('id', $item['id'])->update([
-                    'order_column' => $item['position'],
-                ]);
-            } elseif (isset($item['temp_name']) && isset($newImageMap[$item['temp_name']])) {
-                // Match new uploaded image by original name
-                $imageId = $newImageMap[$item['temp_name']];
-                $product->images()->where('id', $imageId)->update([
-                    'order_column' => $item['position'],
-                ]);
-            }
-        }
-    }
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

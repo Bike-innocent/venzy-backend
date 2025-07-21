@@ -26,6 +26,19 @@ class InventoryController extends Controller
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
     public function index(Request $request)
     {
         // 🔹 Base collections
@@ -105,19 +118,50 @@ class InventoryController extends Controller
             });
         }
 
+
+
+
+
+
+
+
+
+
         // 🔹 Sort
         switch ($request->sort) {
             case 'name_asc':
-                $inventory = $inventory->sortBy('product_name');
+                $inventory = $inventory->sortBy('product_name', SORT_NATURAL | SORT_FLAG_CASE);
                 break;
             case 'name_desc':
-                $inventory = $inventory->sortByDesc('product_name');
+                $inventory = $inventory->sortByDesc('product_name', SORT_NATURAL | SORT_FLAG_CASE);
+                break;
+            case 'committed_asc':
+                $inventory = $inventory->sortBy('committed');
+                break;
+            case 'committed_desc':
+                $inventory = $inventory->sortByDesc('committed');
+                break;
+            case 'available_asc':
+                $inventory = $inventory->sortBy('available');
+                break;
+            case 'available_desc':
+                $inventory = $inventory->sortByDesc('available');
+                break;
+            case 'on_hand_asc':
+                $inventory = $inventory->sortBy('on_hand');
+                break;
+            case 'on_hand_desc':
+                $inventory = $inventory->sortByDesc('on_hand');
+                break;
+            case 'oldest':
+                $inventory = $inventory->sortBy('created_at');
                 break;
             case 'latest':
             default:
                 $inventory = $inventory->sortByDesc('created_at');
                 break;
         }
+
 
         // 🔹 Pagination manually
         $page = $request->get('page', 1);
@@ -140,6 +184,28 @@ class InventoryController extends Controller
             ],
         ]);
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -78,15 +78,10 @@ class Product extends Model
     }
 
 
-    // public function images()
-    // {
-    //     return $this->hasMany(ProductImage::class);
-    // }
-
     public function images()
-{
-    return $this->hasMany(ProductImage::class)->orderBy('order_column')->orderBy('id');
-}
+    {
+        return $this->hasMany(ProductImage::class)->orderBy('order_column')->orderBy('id');
+    }
 
     public function orderItems()
     {
