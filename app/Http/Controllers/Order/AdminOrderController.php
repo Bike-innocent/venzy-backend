@@ -8,6 +8,7 @@ use App\Models\Order;
 use Illuminate\Http\Request;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class AdminOrderController extends Controller
 {
@@ -430,63 +431,6 @@ class AdminOrderController extends Controller
 
 
 
-
-
-
-    public function fulfill(Request $request, Order $order)
-    {
-        $data = $request->validate([
-            'carrier_name' => 'nullable|string|max:255',
-            'tracking_number' => 'nullable|string|max:255',
-            'tracking_url' => 'nullable|string|max:255',
-            'notes' => 'nullable|string',
-        ]);
-
-        $fulfillment = $order->fulfillment;
-
-        if ($fulfillment) {
-            // Update existing fulfillment info
-            $fulfillment->update($data);
-
-            return response()->json([
-                'message' => 'Fulfillment info updated.',
-                'fulfillment' => $fulfillment,
-            ]);
-        }
-
-        // Only allow fulfillment creation for paid & unfulfilled orders
-        if ($order->payment_status !== 'paid') {
-            return response()->json([
-                'message' => 'Only paid orders can be fulfilled.',
-            ], 400);
-        }
-
-        if (in_array($order->fulfillment_status, ['fulfilled', 'cancelled', 'returned'])) {
-            return response()->json([
-                'message' => 'Order has already been fulfilled, cancelled, or returned.',
-            ], 400);
-        }
-
-        // Create new fulfillment record
-        $fulfillment = $order->fulfillment()->create([
-            ...$data,
-            'dispatched_at' => now(),
-        ]);
-
-        $order->update([
-            'fulfillment_status' => 'fulfilled',
-            'delivery_status' => 'in_transit',
-        ]);
-
-        return response()->json([
-            'message' => 'Order has been fulfilled and is now in transit.',
-            'fulfillment' => $fulfillment,
-        ]);
-    }
-
-
-
-
     public function markAsPaid(Request $request, Order $order)
     {
         if ($order->payment_status === 'paid') {
@@ -515,5 +459,103 @@ class AdminOrderController extends Controller
             'message' => 'Order marked as paid.',
             'payment' => $payment,
         ]);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    public function fulfill(Request $request, Order $order)
+    {
+        $data = $request->validate([
+            'carrier_name' => 'nullable|string|max:255',
+            'tracking_number' => 'nullable|string|max:255',
+            'tracking_url' => 'nullable|string|max:255',
+            'notes' => 'nullable|string',
+        ]);
+
+        $fulfillment = $order->fulfillment;
+
+        if ($fulfillment) {
+            $fulfillment->update($data);
+
+            if ($order->delivery_status !== 'delivered') {
+                $order->update([
+                    'delivery_status' => 'in_transit',
+                ]);
+            }
+
+            return response()->json([
+                'message' => 'Fulfillment info updated.',
+                'fulfillment' => $fulfillment,
+            ]);
+        }
+
+
+
+
+        // Only allow fulfillment creation for paid & unfulfilled orders
+        if ($order->payment_status !== 'paid') {
+            return response()->json([
+                'message' => 'Only paid orders can be fulfilled.',
+            ], 400);
+        }
+
+        if (in_array($order->fulfillment_status, ['fulfilled', 'cancelled', 'returned'])) {
+            return response()->json([
+                'message' => 'Order has already been fulfilled, cancelled, or returned.',
+            ], 400);
+        }
+
+        // Create new fulfillment record
+        $fulfillment = $order->fulfillment()->create([
+            ...$data,
+            'dispatched_at' => now(),
+        ]);
+
+        $order->update([
+            'fulfillment_status' => 'fulfilled',
+            'delivery_status' => in_array($order->delivery_status, ['delivered', 'failed'])
+                ? $order->delivery_status
+                : 'in_transit',
+        ]);
+
+
+        return response()->json([
+            'message' => 'Order has been fulfilled and is now in transit.',
+            'fulfillment' => $fulfillment,
+        ]);
+    }
+
+
+
+
+    public function updateDeliveryStatus(Request $request, Order $order)
+    {
+        $validated = $request->validate([
+            'delivery_status' => ['required', Rule::in(['in_transit', 'delivered', 'failed'])],
+        ]);
+
+        if ($order->fulfillment_status !== 'fulfilled') {
+            return response()->json(['message' => 'Order is not fulfilled yet'], 400);
+        }
+
+        $order->delivery_status = $validated['delivery_status'];
+        $order->save();
+
+        return response()->json(['message' => 'Delivery status updated']);
     }
 }

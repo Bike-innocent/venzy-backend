@@ -34,6 +34,7 @@ return new class extends Migration
                 'refunded',
                 'failed'
             ])->default('unpaid');
+            $table->string('payment_method')->nullable();
 
             $table->enum('fulfillment_status', [
                 'unfulfilled',
