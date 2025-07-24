@@ -13,6 +13,14 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('order_id')->constrained()->onDelete('cascade');
+
+            $table->enum('status', ['pending', 'paid', 'failed', 'refunded'])->default('pending');
+            $table->string('method')->nullable(); // cash, card, bank_transfer, paystack, etc.
+            $table->decimal('amount', 10, 2);
+            $table->string('reference')->nullable(); // transaction ref from Paystack etc.
+            $table->timestamp('paid_at')->nullable();
+
             $table->timestamps();
         });
     }

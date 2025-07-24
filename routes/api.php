@@ -368,6 +368,7 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
     Route::get('/orders/{id}', [AdminOrderController::class, 'show'])->middleware('permission:orders.view');
 
     Route::post('/orders/{order}/fulfill', [AdminOrderController::class, 'fulfill']);
+    Route::post('/orders/{order}/mark-paid', [AdminOrderController::class, 'markAsPaid']);
 
     
     Route::patch('/orders/{id}/status', [AdminOrderController::class, 'updateStatus'])->middleware('permission:orders.update');

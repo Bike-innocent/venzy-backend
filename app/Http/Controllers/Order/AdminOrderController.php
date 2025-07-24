@@ -148,7 +148,9 @@ class AdminOrderController extends Controller
         $orders = Order::with([
             'user:id,name,email',
             'items.product.images',
-            'items.variant'
+            'items.variant',
+            'fulfillment',
+
         ])->get();
 
         // Handle custom tab filters
@@ -247,7 +249,7 @@ class AdminOrderController extends Controller
         $order = Order::with([
             'items.product.images',
             'items.variant',
-            'address',
+            'fulfillment',
             'user'
         ])->findOrFail($id);
 
@@ -392,12 +394,47 @@ class AdminOrderController extends Controller
 
 
 
+    // public function fulfill(Request $request, Order $order)
+    // {
+    //     if ($order->fulfillment_status !== 'unfulfilled') {
+    //         return response()->json(['message' => 'Order already fulfilled or cancelled'], 400);
+    //     }
+
+    //     $data = $request->validate([
+    //         'carrier_name' => 'nullable|string|max:255',
+    //         'tracking_number' => 'nullable|string|max:255',
+    //         'tracking_url' => 'nullable|string|max:255',
+    //         'notes' => 'nullable|string',
+    //     ]);
+
+    //     $fulfillment = $order->fulfillment()->create([
+    //         'carrier_name' => $data['carrier_name'],
+    //         'tracking_number' => $data['tracking_number'],
+    //         'tracking_url' => $data['tracking_url'],
+    //         'notes' => $data['notes'],
+    //         'dispatched_at' => now(),
+    //     ]);
+
+    //     $order->update([
+    //         'fulfillment_status' => 'fulfilled',
+    //         'delivery_status' => 'in_transit',
+    //     ]);
+
+    //     return response()->json([
+    //         'message' => 'Fulfillment created',
+    //         'fulfillment' => $fulfillment,
+    //     ]);
+    // }
+
+
+
+
+
+
+
+
     public function fulfill(Request $request, Order $order)
     {
-        if ($order->fulfillment_status !== 'unfulfilled') {
-            return response()->json(['message' => 'Order already fulfilled or cancelled'], 400);
-        }
-
         $data = $request->validate([
             'carrier_name' => 'nullable|string|max:255',
             'tracking_number' => 'nullable|string|max:255',
@@ -405,11 +442,34 @@ class AdminOrderController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+        $fulfillment = $order->fulfillment;
+
+        if ($fulfillment) {
+            // Update existing fulfillment info
+            $fulfillment->update($data);
+
+            return response()->json([
+                'message' => 'Fulfillment info updated.',
+                'fulfillment' => $fulfillment,
+            ]);
+        }
+
+        // Only allow fulfillment creation for paid & unfulfilled orders
+        if ($order->payment_status !== 'paid') {
+            return response()->json([
+                'message' => 'Only paid orders can be fulfilled.',
+            ], 400);
+        }
+
+        if (in_array($order->fulfillment_status, ['fulfilled', 'cancelled', 'returned'])) {
+            return response()->json([
+                'message' => 'Order has already been fulfilled, cancelled, or returned.',
+            ], 400);
+        }
+
+        // Create new fulfillment record
         $fulfillment = $order->fulfillment()->create([
-            'carrier_name' => $data['carrier_name'],
-            'tracking_number' => $data['tracking_number'],
-            'tracking_url' => $data['tracking_url'],
-            'notes' => $data['notes'],
+            ...$data,
             'dispatched_at' => now(),
         ]);
 
@@ -419,8 +479,41 @@ class AdminOrderController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Fulfillment created',
+            'message' => 'Order has been fulfilled and is now in transit.',
             'fulfillment' => $fulfillment,
+        ]);
+    }
+
+
+
+
+    public function markAsPaid(Request $request, Order $order)
+    {
+        if ($order->payment_status === 'paid') {
+            return response()->json(['message' => 'Order is already marked as paid.'], 400);
+        }
+
+        $data = $request->validate([
+            'method' => 'required|string|max:255',
+            'reference' => 'nullable|string|max:255',
+        ]);
+
+        $payment = $order->payments()->create([
+            'status' => 'paid',
+            'method' => $data['method'],
+            'reference' => $data['reference'] ?? null,
+            'amount' => $order->total_amount,
+            'paid_at' => now(),
+        ]);
+
+        $order->update([
+            'payment_status' => 'paid',
+            'payment_method' => $data['method'],
+        ]);
+
+        return response()->json([
+            'message' => 'Order marked as paid.',
+            'payment' => $payment,
         ]);
     }
 }
