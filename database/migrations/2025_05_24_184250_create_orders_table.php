@@ -11,19 +11,52 @@ return new class extends Migration
      */
     public function up(): void
     {
+
+
+
+
+
+
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('address_id')->constrained()->onDelete('cascade');
 
             $table->dateTime('order_date');
             $table->foreignId('discount_id')->nullable()->constrained()->onDelete('set null');
             $table->decimal('discount_amount', 10, 2)->default(0);
             $table->decimal('shipping_amount', 10, 2)->default(0);
-
             $table->decimal('total_amount', 10, 2);
 
-            $table->enum('status', ['processing', 'shipped', 'delivered', 'returns', 'cancelled']);
+            $table->enum('payment_status', [
+                'unpaid',
+                'pending',
+                'paid',
+                'refunded',
+                'failed'
+            ])->default('unpaid');
+
+            $table->enum('fulfillment_status', [
+                'unfulfilled',
+                'fulfilled',
+                'returned',
+                'cancelled'
+            ])->default('unfulfilled');
+
+            $table->enum('delivery_status', [
+                'in_transit',
+                'delivered',
+                'failed'
+            ])->nullable();
+
+            // Shipping address snapshot
+            $table->string('shipping_full_name');
+            $table->string('shipping_phone');
+            $table->string('shipping_dial_code')->nullable();
+            $table->string('shipping_address_line_1');
+            $table->string('shipping_address_line_2')->nullable();
+            $table->string('shipping_city');
+            $table->string('shipping_state');
+            $table->string('shipping_country');
 
             $table->timestamps();
             $table->softDeletes();
@@ -31,7 +64,7 @@ return new class extends Migration
     }
 
     /**
-     * Reverse the migrations.
+     * Reverse the migrations
      */
     public function down(): void
     {
@@ -43,6 +76,16 @@ return new class extends Migration
 
 
 
+
+
+//   $table->string('tracking_number')->nullable();
+//             $table->string('tracking_url')->nullable();
+//             $table->string('payment_method')->default('credit_card'); // Default payment method
+//             $table->string('shipping_method')->default('standard'); // Default shipping method
+//             $table->string('shipping_cost')->default('0.00'); // Default shipping cost
+//             $table->string('coupon_code')->nullable(); // Optional coupon code
+//             $table->decimal('tax_amount', 10, 2)->default(0.00); // Default tax amount
+//             $table->decimal('subtotal_amount', 10, 2)->default(0.00); // Default subtotal amount
 
 
 

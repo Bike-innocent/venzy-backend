@@ -22,276 +22,6 @@ class OrderController extends Controller
 
 
 
-
-
-    // public function checkout(Request $request)
-    // {
-    //     $user = $request->user();
-
-    //     $validated = $request->validate([
-    //         'address_id' => 'required|exists:addresses,id',
-    //     ]);
-
-    //     // Ensure the address belongs to the authenticated user
-    //     $address = \App\Models\Address::where('id', $validated['address_id'])
-    //         ->where('user_id', $user->id)
-    //         ->first();
-
-    //     if (!$address) {
-    //         return response()->json(['error' => 'Unauthorized address'], 403);
-    //     }
-
-    //     DB::beginTransaction();
-
-    //     try {
-    //         $cartItems = CartItem::with('product', 'variant')
-    //             ->where('user_id', $user->id)
-    //             ->where('is_checked_out', false)
-    //             ->get();
-
-    //         if ($cartItems->isEmpty()) {
-    //             return response()->json(['error' => 'Cart is empty'], 400);
-    //         }
-
-    //         $total = 0;
-
-    //         foreach ($cartItems as $item) {
-    //             $stock = $item->variant ? $item->variant->stock : $item->product->stock;
-
-    //             if ($item->quantity > $stock) {
-    //                 throw new \Exception('Item out of stock: ' . $item->product->name);
-    //             }
-
-    //             $total += $item->quantity * $item->price;
-    //         }
-
-    //         $order = Order::create([
-    //             'user_id' => $user->id,
-    //             'address_id' => $validated['address_id'],
-    //             'order_date' => now(),
-    //             'total_amount' => $total,
-    //             'status' => 'processing',
-    //         ]);
-
-    //         foreach ($cartItems as $item) {
-    //             OrderItem::create([
-    //                 'order_id' => $order->id,
-    //                 'product_id' => $item->product_id,
-    //                 'product_variant_id' => $item->product_variant_id,
-    //                 'quantity' => $item->quantity,
-    //                 'price' => $item->price,
-    //             ]);
-
-    //             // Update stock
-    //             if ($item->variant) {
-    //                 $item->variant->decrement('stock', $item->quantity);
-    //             } else {
-    //                 $item->product->decrement('stock', $item->quantity);
-    //             }
-
-    //             $item->is_checked_out = true;
-    //             $item->save();
-    //         }
-
-    //         DB::commit();
-
-    //         return response()->json([
-    //             'message' => 'Order placed successfully',
-    //             'order_id' => $order->id
-    //         ]);
-    //     } catch (\Exception $e) {
-    //         DB::rollBack();
-    //         return response()->json(['error' => $e->getMessage()], 500);
-    //     }
-    // }
-
-
-
-
-    // public function checkout(Request $request)
-    // {
-    //     $user = $request->user();
-
-    //     $validated = $request->validate([
-    //         'address_id' => 'required|exists:addresses,id',
-    //         'discount_code' => 'nullable|string'
-    //     ]);
-
-    //     $address = \App\Models\Address::where('id', $validated['address_id'])
-    //         ->where('user_id', $user->id)
-    //         ->first();
-
-    //     if (!$address) {
-    //         return response()->json(['error' => 'Unauthorized address'], 403);
-    //     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    //     DB::beginTransaction();
-
-    //     try {
-    //         $cartItems = CartItem::with('product', 'variant')
-    //             ->where('user_id', $user->id)
-    //             ->where('is_checked_out', false)
-    //             ->get();
-
-    //         if ($cartItems->isEmpty()) {
-    //             return response()->json(['error' => 'Cart is empty'], 400);
-    //         }
-
-    //         $total = 0;
-
-
-
-    //         $discount = null;
-    //         $discountAmount = 0;
-
-    //         if ($request->filled('discount_code')) {
-    //             $discount = Discount::where('code', $request->discount_code)->first();
-
-    //             if ($discount && $discount->is_active) {
-    //                 // Validate requirements
-    //                 $subtotal = $cartItems->sum(fn($item) => $item->quantity * $item->price);
-
-    //                 $meetsMinimum = match ($discount->requirement_type) {
-    //                     'none' => true,
-    //                     'min_purchase_amount' => $subtotal >= $discount->min_purchase_amount,
-    //                     'min_quantity' => $cartItems->sum('quantity') >= $discount->min_quantity,
-    //                     default => false,
-    //                 };
-
-    //                 if ($meetsMinimum) {
-    //                     if ($discount->discount_type === 'order') {
-    //                         $discountAmount = $discount->value_type === 'percentage'
-    //                             ? ($subtotal * $discount->value / 100)
-    //                             : $discount->value;
-    //                     }
-
-    //                     // TODO: Add product-specific logic if needed
-    //                 }
-    //             }
-    //         }
-
-
-    //         foreach ($cartItems as $item) {
-    //             $variant = $item->variant;
-    //             $product = $item->product;
-
-    //             // Check committed quantity for this variant
-    //             $committed = 0;
-
-    //             if ($variant) {
-    //                 $committed = $variant->orderItems()
-    //                     ->whereHas('order', function ($q) {
-    //                         $q->whereIn('status', ['processing', 'shipped']);
-    //                     })->sum('quantity');
-
-    //                 $available = max(0, $variant->stock - $committed);
-    //             } else {
-    //                 $committed = $product->orderItems()
-    //                     ->whereHas('order', function ($q) {
-    //                         $q->whereIn('status', ['processing', 'shipped']);
-    //                     })->sum('quantity');
-
-    //                 $available = max(0, $product->stock - $committed);
-    //             }
-
-    //             if ($item->quantity > $available) {
-    //                 throw new \Exception('Insufficient available stock for: ' . $product->name);
-    //             }
-
-    //             $total += $item->quantity * $item->price;
-    //         }
-
-    //         // $order = Order::create([
-    //         //     'user_id' => $user->id,
-    //         //     'address_id' => $validated['address_id'],
-    //         //     'order_date' => now(),
-    //         //     'total_amount' => $total,
-    //         //     'status' => 'processing',
-    //         // ]);
-
-    //         $order = Order::create([
-    //             'user_id' => $user->id,
-    //             'address_id' => $validated['address_id'],
-    //             'order_date' => now(),
-    //             'discount_id' => $discount?->id,
-    //             'discount_amount' => $discountAmount,
-    //             'total_amount' => $total - $discountAmount,
-    //             'status' => 'processing',
-    //         ]);
-
-    //         foreach ($cartItems as $item) {
-    //             OrderItem::create([
-    //                 'order_id' => $order->id,
-    //                 'product_id' => $item->product_id,
-    //                 'product_variant_id' => $item->product_variant_id,
-    //                 'quantity' => $item->quantity,
-    //                 'price' => $item->price,
-    //             ]);
-
-    //             // ✅ Do NOT decrement stock here
-    //             $item->is_checked_out = true;
-    //             $item->save();
-    //         }
-
-    //         DB::commit();
-
-    //         return response()->json([
-    //             'message' => 'Order placed successfully',
-    //             'order_id' => $order->id
-    //         ]);
-    //     } catch (\Exception $e) {
-    //         DB::rollBack();
-    //         return response()->json(['error' => $e->getMessage()], 500);
-    //     }
-    // }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     // public function checkout(Request $request)
     // {
     //     $user = $request->user();
@@ -323,9 +53,14 @@ class OrderController extends Controller
 
     //         $subtotal = $cartItems->sum(fn($item) => $item->quantity * $item->price);
     //         $total = $subtotal;
+    //         $shippingPrice = 500;
 
     //         $discount = null;
     //         $discountAmount = 0;
+
+
+
+
 
     //         if ($request->filled('discount_code')) {
     //             $discount = Discount::where('code', $request->discount_code)
@@ -339,57 +74,55 @@ class OrderController extends Controller
     //                 })
     //                 ->first();
 
+    //             if (!$discount) {
+    //                 return response()->json(['error' => 'Invalid or expired code'], 400);
+    //             }
 
+    //             if (!$discount->isEligibleForCart($cartItems, $user)) {
+    //                 return response()->json(['error' => 'You do not meet the discount requirement'], 400);
+    //             }
+    //         } else {
+    //             $discount = Discount::where('discount_method', 'automatic')
+    //                 ->where('is_active', true)
+    //                 ->where(function ($q) {
+    //                     $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
+    //                 })
+    //                 ->where(function ($q) {
+    //                     $q->whereNull('ends_at')->orWhere('ends_at', '>=', now());
+    //                 })
+    //                 ->get()
+    //                 ->filter(fn($d) => $d->isEligibleForCart($cartItems, $user))
+    //                 ->sortByDesc(fn($d) => $d->estimatedValue($cartItems)) // You can implement this if needed
+    //                 ->first();
+    //         }
 
+    //         // Apply discount if present
+    //         if ($discount) {
+    //             if ($discount->discount_type === 'order') {
+    //                 $discountAmount = $discount->value_type === 'percentage'
+    //                     ? round($subtotal * $discount->value / 100, 2)
+    //                     : round($discount->value, 2);
 
+    //                 $total -= $discountAmount;
+    //             }
 
+    //             if (!is_null($discount->usage_limit) && $discount->used_count >= $discount->usage_limit) {
+    //                 return response()->json(['error' => 'Discount usage limit reached'], 400);
+    //             }
 
+    //             if ($discount->discount_type === 'shipping') {
+    //                 $shippingDiscount = (!$discount->value_type && !$discount->value)
+    //                     ? $shippingPrice
+    //                     : (
+    //                         $discount->value_type === 'percentage'
+    //                         ? round($shippingPrice * $discount->value / 100, 2)
+    //                         : round($discount->value, 2)
+    //                     );
 
-    //             if ($discount) {
-    //                 // 🧮 Recalculate cart metrics
-    //                 $totalQuantity = $cartItems->sum('quantity');
+    //                 $shippingDiscount = min($shippingPrice, $shippingDiscount);
+    //                 $discountAmount = $shippingDiscount;
 
-    //                 // ✅ Validate requirements
-    //                 $meetsRequirement = match ($discount->requirement_type) {
-    //                     'none' => true,
-    //                     'min_purchase_amount' => $subtotal >= $discount->min_purchase_amount,
-    //                     'min_quantity' => $totalQuantity >= $discount->min_quantity,
-    //                     default => false,
-    //                 };
-
-    //                 if (!$meetsRequirement) {
-    //                     $reason = match ($discount->requirement_type) {
-    //                         'min_purchase_amount' => "Discount requires minimum purchase of ₦{$discount->min_purchase_amount}",
-    //                         'min_quantity' => "Discount requires at least {$discount->min_quantity} items in cart",
-    //                         default => "You do not meet the discount requirement",
-    //                     };
-
-    //                     return response()->json(['error' => $reason], 400);
-    //                 }
-
-    //                 // ✅ Apply valid discount
-    //                 if ($discount->discount_type === 'order') {
-    //                     $discountAmount = $discount->value_type === 'percentage'
-    //                         ? round($subtotal * $discount->value / 100, 2)
-    //                         : round($discount->value, 2);
-    //                     $total -= $discountAmount;
-    //                 }
-
-    //                 if ($discount->discount_type === 'shipping') {
-    //                     $shippingPrice = 500;
-
-    //                     $shippingDiscount = (!$discount->value_type && !$discount->value)
-    //                         ? $shippingPrice // Free shipping
-    //                         : (
-    //                             $discount->value_type === 'percentage'
-    //                             ? round($shippingPrice * $discount->value / 100, 2)
-    //                             : round($discount->value, 2)
-    //                         );
-
-    //                     $shippingDiscount = min($shippingPrice, $shippingDiscount);
-    //                     $discountAmount = $shippingDiscount;
-    //                     $total = $subtotal + ($shippingPrice - $shippingDiscount);
-    //                 }
+    //                 $total = $subtotal + ($shippingPrice - $shippingDiscount);
     //             }
     //         }
 
@@ -416,9 +149,18 @@ class OrderController extends Controller
     //             'order_date' => now(),
     //             'discount_id' => $discount?->id,
     //             'discount_amount' => $discountAmount,
+    //             'shipping_amount' => $shippingPrice,
     //             'total_amount' => $total,
     //             'status' => 'processing',
     //         ]);
+
+    //         if ($discount) {
+    //             // Log user usage
+    //             $discount->users()->attach($user->id); // discount_user table
+
+    //             // Increment usage count
+    //             $discount->increment('used_count');
+    //         }
 
     //         foreach ($cartItems as $item) {
     //             OrderItem::create([
@@ -444,37 +186,6 @@ class OrderController extends Controller
     //         return response()->json(['error' => $e->getMessage()], 500);
     //     }
     // }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -518,10 +229,7 @@ class OrderController extends Controller
             $discount = null;
             $discountAmount = 0;
 
-
-
-
-
+            // 🔹 Discount check
             if ($request->filled('discount_code')) {
                 $discount = Discount::where('code', $request->discount_code)
                     ->where('discount_method', 'code')
@@ -552,11 +260,11 @@ class OrderController extends Controller
                     })
                     ->get()
                     ->filter(fn($d) => $d->isEligibleForCart($cartItems, $user))
-                    ->sortByDesc(fn($d) => $d->estimatedValue($cartItems)) // You can implement this if needed
+                    ->sortByDesc(fn($d) => $d->estimatedValue($cartItems))
                     ->first();
             }
 
-            // Apply discount if present
+            // 🔹 Apply discount
             if ($discount) {
                 if ($discount->discount_type === 'order') {
                     $discountAmount = $discount->value_type === 'percentage'
@@ -586,13 +294,16 @@ class OrderController extends Controller
                 }
             }
 
-            // ✅ Stock check
+            // 🔹 Stock check — NEW LOGIC
             foreach ($cartItems as $item) {
                 $variant = $item->variant;
                 $product = $item->product;
 
                 $committed = ($variant ? $variant->orderItems() : $product->orderItems())
-                    ->whereHas('order', fn($q) => $q->whereIn('status', ['processing', 'shipped']))
+                    ->whereHas('order', function ($q) {
+                        $q->where('payment_status', 'paid')
+                            ->where('fulfillment_status', 'unfulfilled');
+                    })
                     ->sum('quantity');
 
                 $available = max(0, ($variant?->stock ?? $product->stock) - $committed);
@@ -602,33 +313,42 @@ class OrderController extends Controller
                 }
             }
 
-            // ✅ Create order
+            // 🔹 Create order (updated to snapshot address fields)
             $order = Order::create([
-                'user_id' => $user->id,
-                'address_id' => $validated['address_id'],
-                'order_date' => now(),
-                'discount_id' => $discount?->id,
-                'discount_amount' => $discountAmount,
-                'shipping_amount' => $shippingPrice,
-                'total_amount' => $total,
-                'status' => 'processing',
+                'user_id'            => $user->id,
+                'order_date'         => now(),
+                'discount_id'        => $discount?->id,
+                'discount_amount'    => $discountAmount,
+                'shipping_amount'    => $shippingPrice,
+                'total_amount'       => $total,
+                'payment_status'     => 'paid', // TEMP: until payment gateway
+                'fulfillment_status' => 'unfulfilled',
+                'delivery_status'    => null,
+
+                // Snapshot shipping address
+                'shipping_full_name'        => $address->full_name,
+                'shipping_phone'            => $address->phone,
+                'shipping_dial_code'        => $address->dial_code,
+                'shipping_address_line_1'   => $address->address_line_1,
+                'shipping_address_line_2'   => $address->address_line_2,
+                'shipping_city'             => $address->city,
+                'shipping_state'            => $address->state,
+                'shipping_country'          => $address->country,
             ]);
 
-            if ($discount) {
-                // Log user usage
-                $discount->users()->attach($user->id); // discount_user table
 
-                // Increment usage count
+            if ($discount) {
+                $discount->users()->attach($user->id);
                 $discount->increment('used_count');
             }
 
             foreach ($cartItems as $item) {
                 OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $item->product_id,
+                    'order_id'          => $order->id,
+                    'product_id'        => $item->product_id,
                     'product_variant_id' => $item->product_variant_id,
-                    'quantity' => $item->quantity,
-                    'price' => $item->price,
+                    'quantity'          => $item->quantity,
+                    'price'             => $item->price,
                 ]);
 
                 $item->is_checked_out = true;
@@ -646,6 +366,58 @@ class OrderController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

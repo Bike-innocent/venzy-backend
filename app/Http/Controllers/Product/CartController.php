@@ -175,27 +175,54 @@ class CartController extends Controller
 
 
 
-    protected function getAvailableStock($productId, $variantId = null)
-    {
-        if ($variantId) {
-            $variant = ProductVariant::findOrFail($variantId);
-            $committed = OrderItem::where('product_variant_id', $variant->id)
-                ->whereHas('order', fn($q) => $q->whereIn('status', ['processing', 'shipped']))
-                ->sum('quantity');
+    // protected function getAvailableStock($productId, $variantId = null)
+    // {
+    //     if ($variantId) {
+    //         $variant = ProductVariant::findOrFail($variantId);
+    //         $committed = OrderItem::where('product_variant_id', $variant->id)
+    //             ->whereHas('order', fn($q) => $q->whereIn('status', ['processing', 'shipped']))
+    //             ->sum('quantity');
 
-            return max(0, $variant->stock - $committed);
-        } else {
-            $product = Product::findOrFail($productId);
-            $committed = OrderItem::where('product_id', $product->id)
-                ->whereNull('product_variant_id')
-                ->whereHas('order', fn($q) => $q->whereIn('status', ['processing', 'shipped']))
-                ->sum('quantity');
+    //         return max(0, $variant->stock - $committed);
+    //     } else {
+    //         $product = Product::findOrFail($productId);
+    //         $committed = OrderItem::where('product_id', $product->id)
+    //             ->whereNull('product_variant_id')
+    //             ->whereHas('order', fn($q) => $q->whereIn('status', ['processing', 'shipped']))
+    //             ->sum('quantity');
 
-            return max(0, $product->stock - $committed);
-        }
+    //         return max(0, $product->stock - $committed);
+    //     }
+    // }
+
+
+protected function getAvailableStock($productId, $variantId = null)
+{
+    if ($variantId) {
+        $variant = ProductVariant::findOrFail($variantId);
+
+        $committed = OrderItem::where('product_variant_id', $variant->id)
+            ->whereHas('order', function ($q) {
+                $q->where('payment_status', 'paid')
+                  ->where('fulfillment_status', 'unfulfilled');
+            })
+            ->sum('quantity');
+
+        return max(0, $variant->stock - $committed);
+    } else {
+        $product = Product::findOrFail($productId);
+
+        $committed = OrderItem::where('product_id', $product->id)
+            ->whereNull('product_variant_id')
+            ->whereHas('order', function ($q) {
+                $q->where('payment_status', 'paid')
+                  ->where('fulfillment_status', 'unfulfilled');
+            })
+            ->sum('quantity');
+
+        return max(0, $product->stock - $committed);
     }
-
-
+}
 
 
 
@@ -234,10 +261,6 @@ class CartController extends Controller
         if ($validated['product_variant_id']) {
             $variant = ProductVariant::findOrFail($validated['product_variant_id']);
 
-            // if ($variant->stock < $validated['quantity']) {
-            //     return response()->json(['error' => 'Not enough stock for selected variant'], 400);
-            // }
-
 
             $available = $this->getAvailableStock($validated['product_id'], $validated['product_variant_id'] ?? null);
 
@@ -252,9 +275,7 @@ class CartController extends Controller
                 ->when(!$user, fn($q) => $q->where('guest_id', $guestId))
                 ->first();
         } else {
-            // if ($product->stock < $validated['quantity']) {
-            //     return response()->json(['error' => 'Not enough stock available'], 400);
-            // }
+            
 
             $available = $this->getAvailableStock($validated['product_id'], $validated['product_variant_id'] ?? null);
 

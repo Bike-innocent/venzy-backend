@@ -213,7 +213,6 @@ use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Profile\ProfileController;
 use App\Http\Controllers\Profile\EmailUpdateController;
 
-use App\Http\Controllers\Contact\ContactController;
 
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\User\AddressController;
@@ -367,6 +366,10 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
     // Orders
     Route::get('/orders', [AdminOrderController::class, 'index'])->middleware('permission:orders.view');
     Route::get('/orders/{id}', [AdminOrderController::class, 'show'])->middleware('permission:orders.view');
+
+    Route::post('/orders/{order}/fulfill', [AdminOrderController::class, 'fulfill']);
+
+    
     Route::patch('/orders/{id}/status', [AdminOrderController::class, 'updateStatus'])->middleware('permission:orders.update');
     Route::delete('/orders/{id}/cancel', [AdminOrderController::class, 'adminCancel'])->middleware('permission:orders.cancel');
 

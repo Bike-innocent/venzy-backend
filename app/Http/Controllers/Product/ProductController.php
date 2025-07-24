@@ -236,18 +236,6 @@ class ProductController extends Controller
 
 
 
-            // Save product variants
-            $variantMap = [];
-            // foreach ($validated['product_variants'] as $variant) {
-            // foreach ($validated['product_variants'] ?? [] as $variant) {
-            //     $pv = $product->variants()->create([
-            //         'combo_key' => $variant['comboKey'],
-            //         'price' => $variant['price'],
-            //         'stock' => $variant['stock'],
-            //     ]);
-            //     $variantMap[$variant['index']] = $pv->id;
-            // }
-
             foreach ($validated['product_variants'] ?? [] as $variant) {
                 $price = $variant['price'] ?? 0;
 
@@ -807,9 +795,15 @@ class ProductController extends Controller
 
             // Calculate committed quantity for this variant
             $committed = OrderItem::where('product_variant_id', $variant->id)
+                // ->whereHas('order', function ($q) {
+                //     $q->whereIn('status', ['processing', 'shipped']);
+                // })
+
                 ->whereHas('order', function ($q) {
-                    $q->whereIn('status', ['processing', 'shipped']);
+                    $q->where('payment_status', 'paid')
+                        ->where('fulfillment_status', 'unfulfilled');
                 })
+
                 ->sum('quantity');
 
             $onHand = $variant->stock;

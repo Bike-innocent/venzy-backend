@@ -14,7 +14,7 @@
 // php artisan make:migration create_customer_orders_table
 // php artisan make:migration create_customer_order_lines_table
 // php artisan make:migration create_supplier_orders_table
-// php artisan make:migration create_setting_groups_table
+// php artisan make:migration create_fulfillments_table
 
 
 

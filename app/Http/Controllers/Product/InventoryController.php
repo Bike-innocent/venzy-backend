@@ -44,8 +44,12 @@ class InventoryController extends Controller
         // 🔹 Base collections
         $variantCollection = ProductVariant::with(['product.images'])
             ->withSum(['orderItems as committed_quantity' => function ($q) {
+                // $q->whereHas('order', function ($q) {
+                //     $q->whereIn('status', ['processing', 'shipped']);
+                // });
                 $q->whereHas('order', function ($q) {
-                    $q->whereIn('status', ['processing', 'shipped']);
+                    $q->where('payment_status', 'paid')
+                        ->where('fulfillment_status', 'unfulfilled');
                 });
             }], 'quantity')
             ->get()
@@ -85,9 +89,15 @@ class InventoryController extends Controller
 
                 $committed = OrderItem::where('product_id', $product->id)
                     ->whereNull('product_variant_id')
+                    // ->whereHas('order', function ($q) {
+                    //     $q->whereIn('status', ['processing', 'shipped']);
+                    // })
+
                     ->whereHas('order', function ($q) {
-                        $q->whereIn('status', ['processing', 'shipped']);
+                        $q->where('payment_status', 'paid')
+                            ->where('fulfillment_status', 'unfulfilled');
                     })
+
                     ->sum('quantity');
 
                 $onHand = $product->stock;
@@ -117,9 +127,6 @@ class InventoryController extends Controller
                 return stripos($item['product_name'], $request->search) !== false;
             });
         }
-
-
-
 
 
 
