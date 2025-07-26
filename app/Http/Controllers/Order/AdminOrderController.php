@@ -478,6 +478,80 @@ class AdminOrderController extends Controller
 
 
 
+    // public function fulfill(Request $request, Order $order)
+    // {
+    //     $data = $request->validate([
+    //         'carrier_name' => 'nullable|string|max:255',
+    //         'tracking_number' => 'nullable|string|max:255',
+    //         'tracking_url' => 'nullable|string|max:255',
+    //         'notes' => 'nullable|string',
+    //     ]);
+
+    //     $fulfillment = $order->fulfillment;
+
+    //     if ($fulfillment) {
+    //         $fulfillment->update($data);
+
+    //         if ($order->delivery_status !== 'delivered') {
+    //             $order->update([
+    //                 'delivery_status' => 'in_transit',
+    //             ]);
+    //         }
+
+    //         return response()->json([
+    //             'message' => 'Fulfillment info updated.',
+    //             'fulfillment' => $fulfillment,
+    //         ]);
+    //     }
+
+
+    //     // Only allow fulfillment creation for paid & unfulfilled orders
+    //     if ($order->payment_status !== 'paid') {
+    //         return response()->json([
+    //             'message' => 'Only paid orders can be fulfilled.',
+    //         ], 400);
+    //     }
+
+    //     if (in_array($order->fulfillment_status, ['fulfilled', 'cancelled', 'returned'])) {
+    //         return response()->json([
+    //             'message' => 'Order has already been fulfilled, cancelled, or returned.',
+    //         ], 400);
+    //     }
+
+    //     // Create new fulfillment record
+    //     $fulfillment = $order->fulfillment()->create([
+    //         ...$data,
+    //         'dispatched_at' => now(),
+    //     ]);
+
+    //     $order->update([
+    //         'fulfillment_status' => 'fulfilled',
+    //         'delivery_status' => in_array($order->delivery_status, ['delivered', 'failed'])
+    //             ? $order->delivery_status
+    //             : 'in_transit',
+    //     ]);
+
+
+    //     return response()->json([
+    //         'message' => 'Order has been fulfilled and is now in transit.',
+    //         'fulfillment' => $fulfillment,
+    //     ]);
+    // }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     public function fulfill(Request $request, Order $order)
     {
         $data = $request->validate([
@@ -504,9 +578,6 @@ class AdminOrderController extends Controller
             ]);
         }
 
-
-
-
         // Only allow fulfillment creation for paid & unfulfilled orders
         if ($order->payment_status !== 'paid') {
             return response()->json([
@@ -520,25 +591,61 @@ class AdminOrderController extends Controller
             ], 400);
         }
 
-        // Create new fulfillment record
-        $fulfillment = $order->fulfillment()->create([
-            ...$data,
-            'dispatched_at' => now(),
-        ]);
+        DB::beginTransaction();
+        try {
+            // 🔻 Reduce stock on fulfillment
+            foreach ($order->items as $item) {
+                if ($item->product_variant_id) {
+                    $variant = \App\Models\ProductVariant::find($item->product_variant_id);
+                    if ($variant) {
+                        $variant->stock = max(0, $variant->stock - $item->quantity);
+                        $variant->save();
+                    }
+                } else {
+                    $product = \App\Models\Product::find($item->product_id);
+                    if ($product) {
+                        $product->stock = max(0, $product->stock - $item->quantity);
+                        $product->save();
+                    }
+                }
+            }
 
-        $order->update([
-            'fulfillment_status' => 'fulfilled',
-            'delivery_status' => in_array($order->delivery_status, ['delivered', 'failed'])
-                ? $order->delivery_status
-                : 'in_transit',
-        ]);
+            // ✅ Create fulfillment and update order status
+            $fulfillment = $order->fulfillment()->create([
+                ...$data,
+                'dispatched_at' => now(),
+            ]);
 
+            $order->update([
+                'fulfillment_status' => 'fulfilled',
+                'delivery_status' => in_array($order->delivery_status, ['delivered', 'failed'])
+                    ? $order->delivery_status
+                    : 'in_transit',
+            ]);
 
-        return response()->json([
-            'message' => 'Order has been fulfilled and is now in transit.',
-            'fulfillment' => $fulfillment,
-        ]);
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Order has been fulfilled and stock updated.',
+                'fulfillment' => $fulfillment,
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Fulfillment failed: ' . $e->getMessage()], 500);
+        }
     }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -557,5 +664,84 @@ class AdminOrderController extends Controller
         $order->save();
 
         return response()->json(['message' => 'Delivery status updated']);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    public function cancel(Request $request, Order $order)
+    {
+
+        $request->validate([
+            'reason' => 'required|string|max:1000',
+        ]);
+
+        // Only cancel unfulfilled and undelivered orders
+        if (in_array($order->fulfillment_status, ['fulfilled', 'returned', 'cancelled'])) {
+            return response()->json([
+                'message' => 'Order cannot be cancelled. It has already been processed.',
+            ], 400);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            // Roll back stock if needed
+            foreach ($order->items as $item) {
+                if ($item->product_variant_id) {
+                    $variant = \App\Models\ProductVariant::find($item->product_variant_id);
+                    if ($variant) {
+                        $variant->stock += $item->quantity;
+                        $variant->save();
+                    }
+                } else {
+                    $product = \App\Models\Product::find($item->product_id);
+                    if ($product) {
+                        $product->stock += $item->quantity;
+                        $product->save();
+                    }
+                }
+            }
+
+            // Update order status
+            $order->update([
+                'fulfillment_status' => 'cancelled',
+                'delivery_status' => null,
+                'cancel_reason' => $request->reason,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Order cancelled successfully.',
+                'order' => $order->fresh()
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Cancel failed: ' . $e->getMessage()], 500);
+        }
     }
 }

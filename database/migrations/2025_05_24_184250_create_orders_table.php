@@ -49,6 +49,8 @@ return new class extends Migration
                 'failed'
             ])->nullable();
 
+            $table->text('cancel_reason')->nullable();
+
             // Shipping address snapshot
             $table->string('shipping_full_name');
             $table->string('shipping_phone');

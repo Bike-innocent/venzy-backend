@@ -370,6 +370,8 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
     Route::post('/orders/{order}/fulfill', [AdminOrderController::class, 'fulfill']);
     Route::post('/orders/{order}/mark-paid', [AdminOrderController::class, 'markAsPaid']);
     Route::put('/orders/{order}/delivery-status', [AdminOrderController::class, 'updateDeliveryStatus']);
+    Route::post('/orders/{order}/cancel', [AdminOrderController::class, 'cancel']);
+
 
 
     
