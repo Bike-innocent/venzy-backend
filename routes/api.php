@@ -362,6 +362,8 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
     // Customers
     Route::get('/customers', [AdminCustomerController::class, 'index'])->middleware('permission:users.view');
     Route::get('/customers/{id}', [AdminCustomerController::class, 'show'])->middleware('permission:users.view');
+    Route::post('/customers/bulk-status', [AdminCustomerController::class, 'bulkUpdateStatus']);
+
 
     // Orders
     Route::get('/orders', [AdminOrderController::class, 'index'])->middleware('permission:orders.view');

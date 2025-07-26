@@ -107,7 +107,7 @@ class AdminCustomerController extends Controller
     {
         $search = $request->query('search');
         $sort = $request->query('sort', 'latest'); // default
-        $perPage = 10;
+        $perPage = 20;
 
         $query = \App\Models\User::withCount('orders')
             ->withSum('orders', 'total_amount')
@@ -158,6 +158,7 @@ class AdminCustomerController extends Controller
             return [
                 'id' => $user->id,
                 'name' => $user->name,
+                'is_active' => $user->is_active,
                 'email' => $user->email,
                 'orders_count' => $user->orders_count,
                 'total_spent' => $user->orders_sum_total_amount ?? 0,
@@ -196,6 +197,7 @@ class AdminCustomerController extends Controller
         return response()->json([
             'id' => $user->id,
             'name' => $user->name,
+              'is_active' => $user->is_active,
             'email' => $user->email,
             'phone' => $user->phone,
             'dial_code' => $user->dial_code,
@@ -215,11 +217,46 @@ class AdminCustomerController extends Controller
             'orders' => $user->orders->map(function ($order) {
                 return [
                     'id' => $order->id,
-                    'status' => $order->status,
+                    'payment_status' => $order->payment_status,
                     'total_amount' => $order->total_amount,
                     'order_date' => $order->order_date,
                 ];
             }),
+        ]);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // CustomerController.php
+
+    public function bulkUpdateStatus(Request $request)
+    {
+        $request->validate([
+            'user_ids' => 'required|array',
+            'action' => 'required|in:activate,deactivate',
+        ]);
+
+        $status = $request->action === 'activate';
+
+        User::whereIn('id', $request->user_ids)->update(['is_active' => $status]);
+
+        return response()->json([
+            'message' => 'Customers updated successfully.'
         ]);
     }
 }

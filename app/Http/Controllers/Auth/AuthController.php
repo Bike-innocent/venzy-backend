@@ -75,6 +75,14 @@ class AuthController extends Controller
         }
 
         $user = Auth::user();
+
+        // Prevent inactive users from logging in
+        if (!$user->is_active) {
+            return response()->json([
+                'message' => 'Your account has been deactivated. Contact support.'
+            ], 401);
+        }
+
         $user->load('roles');
 
         // Get flattened permissions (from roles + direct)
@@ -143,23 +151,30 @@ class AuthController extends Controller
 
 
 
+public function refreshUser(Request $request)
+{
+    $user = $request->user()->load('roles');
 
-    public function refreshUser(Request $request)
-    {
-        $user = $request->user()->load('roles');
-        $permissions = $user->getAllPermissions()->pluck('name')->toArray();
-        $roles = $user->roles->pluck('name')->toArray();
-
+    if (!$user->is_active) {
         return response()->json([
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'roles' => $roles,
-            'phone' => $user->phone,
-            'dial_code' => $user->dial_code,
-            'permissions' => $permissions,
-        ]);
+            'message' => 'Your account has been deactivated. Contact support.'
+        ], 401);
     }
+
+    $permissions = $user->getAllPermissions()->pluck('name')->toArray();
+    $roles = $user->roles->pluck('name')->toArray();
+
+    return response()->json([
+        'id' => $user->id,
+        'name' => $user->name,
+        'email' => $user->email,
+        'roles' => $roles,
+        'phone' => $user->phone,
+        'dial_code' => $user->dial_code,
+        'permissions' => $permissions,
+    ]);
+}
+
 
 
     public function logout(Request $request)
